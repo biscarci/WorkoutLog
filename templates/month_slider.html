@@ -1,0 +1,156 @@
+<!-- Selettore Slider per i Mesi -->
+<div class="month-slider d-flex justify-content-center align-items-center mb-3">
+    <a 
+        id="prevMonth" 
+        class="btn-arrow" 
+        href="{{ url_for('select_workout_date', month=date.month-1, year=date.year) }}"
+        ><i class="bi bi-chevron-left"></i></a>
+    <span id="currentMonth" class="mx-3">{{date.strftime("%B %Y").title()}}</span>
+    <a 
+        id="nextMonth" 
+        class="btn-arrow"
+        href="{{ url_for('select_workout_date', month=date.month+1, year=date.year) }}"
+        ><i class="bi bi-chevron-right"></i></a>
+</div>
+
+{% set months = [
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", 
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+] %}
+
+<!-- Popup per selezione anno e mese -->
+<div id="monthYearPicker" class="popup" style="display: none;">
+    <label for="yearSelect" class="form-label">Anno:</label>
+    <select id="yearSelect" class="form-select mb-3">
+        <option value="{{date.year}}">{{date.year}}</option>
+        <option value="{{date.year-1}}">{{date.year-1}}</option>
+        <option value="{{date.year-2}}">{{date.year-2}}</option>
+        <option value="{{date.year-3}}">{{date.year-3}}</option>
+    </select>
+    <label for="monthSelect" class="form-label">Mese:</label>
+    <select id="monthSelect" class="form-select">
+        {% for i in range(12) %}
+            <option value="{{i}}">{{  months[i]  }}</option>
+        {% endfor %}
+    </select>
+    <a id="setMonthYear" class="btn btn-primary mt-3" href="{{ url_for('select_workout_date', month=date.month, year=date.year) }}">Imposta</a>
+</div>
+
+
+
+<!-- JavaScript per il selettore di mesi -->
+<script>
+    
+    const popup = document.getElementById("monthYearPicker");
+    const yearSelect = document.getElementById("yearSelect");
+    const monthSelect = document.getElementById("monthSelect");
+    const setMonthYearButton = document.getElementById("setMonthYear");
+    const currentMonthElement = document.getElementById("currentMonth");
+    const today = new Date();
+    let selectedMonth = 1;
+    let selectedYear = today.getFullYear();
+  
+    function checkFutureDates() {
+        const selectedYear = parseInt(yearSelect.value);
+        
+        // Abilita tutti i mesi
+        for (let i = 0; i < monthSelect.options.length; i++) {
+            monthSelect.options[i].disabled = false;
+        }
+
+        // Disabilita i mesi successivi al mese attuale nell'anno corrente
+        if (selectedYear === today.getFullYear()) {
+            for (let i = today.getMonth() + 1; i < monthSelect.options.length; i++) {
+                monthSelect.options[i].disabled = true;
+            }
+        }
+    }
+
+    currentMonthElement.addEventListener("click", () => {
+        popup.style.display = "block";
+        //checkFutureDates(); // Controllo per disabilitare i mesi futuri
+    });
+
+    yearSelect.addEventListener("change", () => {
+        selectedYear = event.target.value;
+        updateMonthYearLink(selectedMonth, selectedYear)
+    });
+    monthSelect.addEventListener("change", () => {
+        selectedMonth = event.target.value+1;
+        updateMonthYearLink(selectedMonth, selectedYear)
+    });
+
+    
+
+    window.addEventListener("click", (event) => {
+        if (event.target === popup) {
+            popup.style.display = "none";
+        }
+    });
+
+    function updateMonthYearLink(month, year) {
+        const link = `/dashboard/date/${month}/${year}`;
+        setMonthYearButton.href = link;
+    }
+
+</script>
+
+<!-- Stile CSS per il selettore e popup -->
+<style>
+    .month-slider {
+        text-align: center;
+    }
+
+    .btn-arrow {
+        background-color: #2a2a2a;
+        color: #f5f5f5;
+        border: none;
+        font-size: 1.5rem;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        text-decoration: none;
+    }
+
+    .btn-arrow:hover {
+        background-color: #ffcc33;
+    }
+
+    #currentMonth {
+        font-size: 1.5rem;
+        color: #f5f5f5;
+        cursor: pointer;
+    }
+
+    .popup {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        z-index: 10;
+    }
+
+    .form-label {
+        color: #f5f5f5;
+        font-weight: bold;
+    }
+
+    .form-select {
+        background-color: #2a2a2a;
+        color: #f5f5f5;
+        border: none;
+        border-radius: 5px;
+    }
+
+    #setMonthYear {
+        background-color: #ffcc33;
+        color: #121212;
+        border: none;
+    }
+</style>

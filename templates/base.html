@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"> -->
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+      
+      {% block styles %}
+        <!-- Bootstrap CSS -->
+        {{ bootstrap.load_css() }}
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@700&display=swap');
+            
+            body {
+              font-family: 'Arial', sans-serif;
+              background-color: #121212;
+              color: #f5f5f5;
+            }
+            .container {
+              max-width: 800px;
+              margin: 40px auto;
+              background-color: #1e1e1e;
+              padding: 20px;
+              border-radius: 10px;
+              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            }
+            h1 {
+              text-align: center;
+              font-size: 3rem;
+              font-family: 'Raleway', sans-serif;
+              background: linear-gradient(90deg, #e63946, #ffcc33);
+              -webkit-background-clip: text;
+              color: transparent;
+              margin-bottom: 30px;
+            }
+            .accordion-button {
+              background-color: #2a2a2a;
+              color: #f5f5f5;
+              border: none;
+            }
+            .accordion-button:not(.collapsed) {
+              background-color: #fdbe00;
+              color: #000000;
+              font-weight: bold;
+            }
+            .accordion-body {
+              background-color: #333;
+              color: #fff;
+            }
+            .exercises li {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 8px 0;
+            }
+            .exercises li span {
+              margin-right: 2px;
+            }
+            .exercises .name{
+              font-size: clamp(0.8rem, 1.5ch + 0.5vw, 1.2rem);
+            }
+            .exercises .exercise_title{
+              font-size: clamp(0.8rem, 1.5ch + 0.5vw, 1.2rem);
+              color: #f5f5f5;
+            }
+            .exercises .descr{
+              font-size: medium;
+              color: #b0b0b0;
+            }
+            .exercises .note{
+              font-size: small;
+              color: #8f8f8f;
+            }
+            .btn-edit {
+              background-color: #ffcc33;
+              color: #000000;
+              border: none;
+              border-radius: 4px;
+              padding: 5px 10px;
+              font-size: 0.9rem;
+              transition: background-color 0.3s ease;
+              text-decoration: none;
+              font-weight: bold;
+
+            }
+            .btn-edit:hover {
+              background-color: #e6b832;
+            }
+            .btn-dialog {
+              background-color: #5c5c5c;
+              color: #ffffff;
+              border: none;
+              border-radius: 4px;
+              padding: 5px 10px;
+              font-size: 0.9rem;
+              transition: background-color 0.3s ease;
+              text-decoration: none;
+              font-weight: bold;
+
+            }
+            .btn-dialog:hover {
+              background-color: #909090;
+              color: #000000;
+
+            }
+            .btn-delete {
+              background-color: #dc3545;
+              color: #ffffff;
+              border: none;
+              border-radius: 4px;
+              padding: 5px 10px;
+              font-size: 0.9rem;
+              transition: background-color 0.3s ease;
+              text-decoration: none;
+              font-weight: bold;
+
+            }
+            .btn-delete:hover {
+              background-color: #b02a37;
+            }
+            footer {
+              text-align: center;
+              margin-top: 40px;
+              color: #b0b0b0;
+            }
+            .bottom-bar {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              width: 100%;
+              background-color: #1e1e1e;
+              padding: 15px;
+              box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+              text-align: center;
+            }
+            .btn-add-workout {
+              background-color: #ffcc33;
+              color: #121212;
+              font-weight: bold;
+              border: none;
+              border-radius: 5px;
+              padding: 10px 20px;
+              font-size: 1rem;
+              transition: background-color 0.3s ease;
+            }
+            .btn-add-workout:hover {
+              background-color: #e6b832;
+              
+            }
+            .btn-back {
+              background-color: #6c757d;
+              color: #ffffff;
+              font-weight: bold;
+              border: none;
+              border-radius: 5px;
+              padding: 10px 20px;
+              font-size: 1rem;
+              transition: background-color 0.3s ease;
+            }
+            .btn-back:hover {
+              background-color: #565e64;
+            }
+            footer {
+              text-align: center;
+              margin-top: 40px;
+              color: #b0b0b0;
+            }
+             /* Stile per la finestra di dialogo */
+            .modal-content {
+              background-color: #333!important;
+              color: #ffffff!important; /* Testo scuro per migliore leggibilità */
+            }
+            .modal-header {
+              background-color: #fdbe00;
+              color: #000000!important;
+            }
+            .btn-close {
+              color: #fff;
+            }
+            .modal-footer {
+              background-color: #333!important;
+            }
+        </style>
+      {% endblock %}
+    {% endblock %}
+</head>
+<body>
+  
+  {% block content %}{% endblock %}
+    
+
+  {% block scripts %}
+    <!-- Optional JavaScript -->
+    {{ bootstrap.load_js() }}
+  {% endblock %}
+</body>
+</html>

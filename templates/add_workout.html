@@ -1,0 +1,28 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_form %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <h1 class="text-center">Add Workout</h1>
+        <form method="POST" action="{{ url_for('add_workout') }}">
+            {{ form.csrf_token() }}
+            {{ render_form(form) }}
+        </form>
+    </div>
+</div>
+        
+  
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}
+         
+    
+         
+    
+       
+     
+        
+       

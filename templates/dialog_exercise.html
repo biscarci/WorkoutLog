@@ -1,0 +1,50 @@
+
+
+<!-- Modal -->
+<div class="modal fade" id="exerciseModal-{{ exercise.id }}" tabindex="-1" aria-labelledby="exerciseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="exerciseModalLabel">Dettagli Esercizio</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <!-- Contenuto dei dettagli dell'esercizio -->
+          <p class="name">
+            {% if exercise.sets !=0 and  exercise.reps !=0 %} {{exercise.sets}} x {{exercise.reps}} &nbsp; {% endif %}
+            {% if exercise.sets ==0 and  exercise.reps !=0 %} {{exercise.reps}} &nbsp; {% endif %}
+            {{exercise.name}}  &nbsp;
+            {% if exercise.weight_percentage !=0 %}{{exercise.weight_percentage}}% &nbsp; {% endif %}
+            {% if exercise.rpe !=0 %}&nbsp; RPE &nbsp;{{exercise.rpe}} {% endif %}
+          </p>       
+          <p id="content-{{ exercise.id }}">
+            {{ quotes[loop.index] }}
+          </p>
+          <p id="request-{{ exercise.id }}">
+            <a id="submit-button" class="btn-add-workout" onclick="handleClick({{exercise.id}})" href="{{ url_for('exercise_info', id=exercise.id) }}">
+              <span id="button-text">Chiedi</span>
+              <span id="loading-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            </a> 
+          </p>
+          <p id="result-{{ exercise.id }}">
+
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+        </div>
+      </div>
+    </div>
+   <script>
+        function handleClick(num) {
+          document.getElementById('button-text').classList.add('d-none');
+          document.getElementById('loading-spinner').classList.remove('d-none');
+          document.getElementById('submit-button').disabled = true;
+          var content = document.getElementById('content-'+num)
+          var request = document.getElementById('request-'+num)
+          var obj = document.getElementById("result-"+num)
+          
+          
+        }
+    </script>
+  </div>

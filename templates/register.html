@@ -1,0 +1,23 @@
+{% extends "base.html" %} 
+
+{% from 'bootstrap5/form.html' import render_form %}
+
+
+
+{% block content %}
+<div class="container">
+<h1 class="text-center">Registrati</h1>
+    <form method="POST" action="{{ url_for('register') }}">
+        {{ form.csrf_token() }}
+        {{ render_form(form, button_map={'submit':'edit'}) }}
+    </form>
+    <hr>
+    <div class="row">
+        <p>Già registrato? Effettua il login!</p>
+        <a href="{{ url_for('login') }}" class="btn btn-edit btn-block mt-1">Login</a>
+    </div>
+</div>
+{% endblock %}
+
+
+        

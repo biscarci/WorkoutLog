@@ -1,0 +1,49 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <h1 class="text-center">Edit Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
+        <form method="POST" action="{{ url_for('edit_workout', id=workout.id) }}">
+            {{ form.csrf_token() }}
+            <!-- Nome dell'esercizio -->
+            <fieldset class="col-12">
+                <div class="mb-2">
+                    {{ render_field(form.date, class_="form-control", placeholder="Workout Name") }}
+                </div>
+            </fieldset>
+            <fieldset class="col-12">
+                <div class="mb-2">
+                    {{ render_field(form.type, class_="form-control", placeholder="Workout Type1") }}
+                </div>
+            </fieldset>
+            <fieldset class="col-12">
+                <div class="mb-2">
+                    {{ render_field(form.duration, class_="form-control", placeholder="Duration") }}
+                </div>
+            </fieldset>
+            <fieldset class="col-12 text-center">
+                <div class="mb-2">
+                    {{ render_field(form.submit, class_="btn-add-workout") }}
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</div>
+   
+    
+
+<!-- Barra in basso per aggiungere workout -->
+<footer>
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</footer>
+{% endblock %}
+         
+    
+         
+    
+       
+     
+        
+       

@@ -1,0 +1,133 @@
+{% extends "base.html" %} 
+
+{% block content %}
+
+<div class="container">
+  <h1>{{title}}</h1>
+  {% include "month_slider.html" %}
+  {% if workouts %}
+  <div class="accordion" id="workoutAccordion">
+    <!-- Giorno X -->
+    {% for workout in workouts %}
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading{{loop.index}}">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{loop.index}}" aria-expanded="false" aria-controls="collapse{{loop.index}}">
+          {{workout.date.strftime("%A").title()}} - {{workout.date.strftime("%d %B").title()}} 
+          - {{ workout.type }}
+        </button>
+      </h2> 
+      <div id="collapse{{loop.index}}" class="accordion-collapse collapse" aria-labelledby="heading{{loop.index}}" data-bs-parent="#workoutAccordion">
+        <div class="accordion-body">
+          <ul class="exercises list-unstyled">
+            {% if workout.note %}
+              <li class="note">{{ workout.note }}</li>
+              <hr>
+            {% endif %}
+            
+            {% for exercise in workout.exercise %}
+              <li>
+                <span class="name">
+                  {{exercise.repetitions}}&nbsp;
+                  {{exercise.name}}  &nbsp;
+                  {% if exercise.weight_percentage !=0 %}@{{exercise.weight_percentage}}% &nbsp; {% endif %}
+                  {% if exercise.rpe !=0 %}RPE &nbsp;{{exercise.rpe}} {% endif %}
+                                 
+                     
+              {% if exercise.weight or exercise.score or exercise.equipment %}
+                  &nbsp;|&nbsp;&nbsp;
+                  <small class="text-white-50">
+                  {% if exercise.weight %} {{ exercise.weight }} Kg {% endif %}
+                  {% if exercise.score %} {{ exercise.score }} {% endif %}
+                  {% if exercise.equipment %}   &nbsp;-&nbsp; {{ exercise.equipment }} {% endif %}
+                </small>
+                </span>
+                
+              </li>
+              {% else %}
+                </span>     
+              </li>
+              {% endif %}
+              {% if exercise.time != "None" %}<li class="p-0">               <span class="descr">{{exercise.time}}</span></li>{% endif %}
+              {% if exercise.note != "None" %}<li class="p-0">               <span class="note">{{exercise.note}}</span></li>{% endif %}
+              <div class="btn-group btn-group-sm d-flex justify-content-end" role="group" aria-label="...">
+                <button class="btn-dialog" data-bs-toggle="modal" data-bs-target="#exerciseModal-{{ exercise.id }}">
+                  <i class="bi bi-activity"></i>
+                </button>
+                
+                <a href="{{ url_for('edit_exercise', id=exercise.id) }}" role="button" aria-expanded="false" class="btn-edit mx-1">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+                
+                <form action="{{ url_for('delete_exercise', id=exercise.id) }}" method="post" style="display: inline;">
+                  <button type="submit" class="btn-delete" type="button" aria-expanded="false">
+                      <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+            </div>            
+            {% include "dialog_exercise.html" %}
+            {% endfor %}
+            
+            {% if workout.score or workout.equipment%}<hr>{% endif %}
+            {% if workout.score %}<li>{{workout.score}}</li> {% endif %}
+            {% if workout.equipment %}<li>{{workout.equipment}}</li> {% endif %}
+            
+          </ul>
+          <hr>
+          <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+            <div class="btn-group btn-group-sm" role="group">
+              <!-- Pulsante Modifica -->
+              <a href="{{ url_for('edit_workout', id=workout.id) }}" 
+                 role="button" 
+                 aria-label="Modify Workout" 
+                 class="btn-edit">
+                 <i class="bi bi-pencil-square"></i>
+              </a>
+              <a href="{{ url_for('add_exercise', id=workout.id) }}" 
+                 role="button" 
+                 aria-label="Add Exercise" 
+                 class="btn-edit mx-1">
+                 <i class="bi bi-plus-lg"></i>
+              </a>
+              
+              <!-- Pulsante Elimina -->
+              <form action="{{ url_for('delete_workout', id=workout.id) }}" method="post" style="display: inline;">
+                  <button type="submit" 
+                          class="btn-delete" 
+                          aria-label="Elimina Workout" 
+                          type="button">
+                      <i class="bi bi-trash"></i>
+                  </button>
+              </form>
+            </div>
+          </div>
+          
+          
+        </div>
+        
+      </div>
+    </div>
+    {% endfor %}
+
+    
+    <!-- Aggiungi altri giorni qui -->
+  </div>
+  {% endif %}
+  <footer>
+    <p>Continua a spingere al massimo 💪</p>
+  </footer>
+</div>
+
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+  <a class="btn btn-add-workout"
+    style="width: 130px;" 
+    href="{{ url_for('add_workout_menu') }}" 
+    role="button" 
+    aria-expanded="false">
+    <i class="bi bi-play-fill"></i>
+  </a>
+  
+</div>
+
+{% endblock %}
+

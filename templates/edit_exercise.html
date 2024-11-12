@@ -1,0 +1,91 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<style>
+    legend {
+        color: #ffcc33;
+    }
+    h1 {
+        font-size: 30px;
+    }
+</style>
+<div class="container">
+    <h1 class="text-center mb-3">Edit Exercise Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
+    
+    <form class="row g-1" method="POST" action="{{ url_for('edit_exercise', id=exercise.id) }}">
+        {{ form.csrf_token() }}
+        
+        <!-- Nome dell'esercizio -->
+        <fieldset class="col-12">
+            <legend>Exercise Details</legend>
+            <div class="mb-2">
+                {{ render_field(form.name, class_="form-control", placeholder="Exercise Name") }}
+            </div>
+        </fieldset>
+
+        <!-- Weight Percentage e RPE -->
+        <fieldset class="col-12">
+            <legend>Intensity</legend>
+            <div class="row">
+                <div class="col-2">
+                    {{ render_field(form.repetitions, class_="form-control", placeholder="Repetitions") }}
+                </div>
+                
+            </div>
+            <div class="row">
+                <div class="col">
+                    {{ render_field(form.weight_percentage, class_="form-control", placeholder="Weight %") }}
+                </div>
+                <div class="col">
+                    {{ render_field(form.rpe, class_="form-control", placeholder="RPE") }}
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Time -->
+        <div class="col-12">
+            {{ render_field(form.time, class_="form-control", placeholder="Time") }}
+        </div>
+        
+        <!-- Peso, Attrezzatura e Punteggio -->
+        <fieldset class="col-12">
+            <legend>Additional Info</legend>
+            <div class="row">
+                <div class="col">
+                    {{ render_field(form.weight, class_="form-control", placeholder="Weight") }}
+                </div>
+                <div class="col">
+                    {{ render_field(form.equipment, class_="form-control", placeholder="Equipment") }}
+                </div>
+                <div class="col">
+                    {{ render_field(form.score, class_="form-control", placeholder="Score") }}
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Note -->
+        <div class="col-12">
+            {{ render_field(form.note, class_="form-control", placeholder="Notes") }}
+        </div>
+
+        <!-- Bottone di invio -->
+        <div class="col-12 text-center">
+            {{ render_field(form.submit, class_="btn-add-workout") }}
+        </div>
+    </form>
+</div>
+
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}
+         
+    
+         
+    
+       
+     
+        
+       

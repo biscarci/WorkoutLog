@@ -1,0 +1,36 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<style>
+    legend {
+        color: #ffcc33;
+    }
+    h1 {
+        font-size: 30px;
+    }
+</style>
+<div class="container">
+    <h1 class="text-center mb-3">Advice For Exercise Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
+    <p>
+        {{exercise.name}}
+    </p>
+    <p>
+        {{advice}}
+    </p>
+    
+</div>
+
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}
+         
+    
+         
+    
+       
+     
+        
+       
