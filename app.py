@@ -52,6 +52,7 @@ class Exercise(db.Model):
     weight = db.Column(db.Float, nullable=True)
     score = db.Column(db.String(50), nullable=True)
     equipment = db.Column(db.String(50), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.now)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
 
     def get_workout(self):
@@ -178,10 +179,7 @@ def upload_workout():
                 for e in w.exercises:
                     exercise = Exercise(
                         name = e.name,
-                        repetitions = e.repetitions,
-                        weight_percentage = e.weight_percentage,
-                        rpe = e.rpe,
-                        time = e.time,
+                        repetitions = e.description,
                         note = e.note,
                         workout_id = workout.id
                     )
@@ -225,9 +223,6 @@ def add_exercise(id):
         e = Exercise(
             name = form.name.data,
             repetitions = form.repetitions.data,
-            weight_percentage = form.weight_percentage.data,
-            rpe = form.rpe.data,
-            time = form.time.data,
             note = form.note.data,
             weight = form.weight.data,
             score = form.score.data,
@@ -306,9 +301,6 @@ def edit_exercise(id):
     if form.validate_on_submit():        
         e.name = form.name.data     
         e.repetitions = form.repetitions.data     
-        e.weight_percentage = form.weight_percentage.data
-        e.rpe = form.rpe.data     
-        e.time = form.time.data   
         e.note = form.note.data 
         e.weight = form.weight.data
         e.equipment = form.equipment.data
@@ -319,9 +311,6 @@ def edit_exercise(id):
     elif request.method == 'GET':
         form.name.data = e.name
         form.repetitions.data = e.repetitions
-        form.weight_percentage.data = e.weight_percentage
-        form.rpe.data = e.rpe
-        form.time.data = e.time
         form.note.data = e.note
         form.weight.data = e.weight
         form.equipment.data = e.equipment 
@@ -355,17 +344,38 @@ def delete_exercise(id):
 @login_required
 def exercise_info(id): 
     exercise = Exercise.query.get_or_404(id)
-    exercises = Exercise.query.filter(Exercise.name.icontains(exercise.name)).all()
+    print(exercise.name)
+    if 'back squat' in exercise.name: key = 'squat'
+    elif 'front squat' in exercise.name: key = 'front squat'
+    elif 'push press' in exercise.name: key = 'push press'
+    elif 'push jerk' in exercise.name: key = 'push jerk'
+    elif 'strict press' in exercise.name: key = 'strict press'
+    elif 'split jerk' in exercise.name: key = 'split jerk'
+    elif 'deadlift' in exercise.name: key = 'squat'
+    elif 'bench press' in exercise.name: key = 'bench press'
+    else: key = exercise.name
+    print('SEARCH KEY', key)
+    exercises = Exercise.query.filter(Exercise.name.icontains(key)).order_by(Exercise.date.desc()).all()
+
+    history = ''
     for e in exercises:
-        history = "\n".join(f"{chiave}: {valore}" for chiave, valore in e.__dict__.items())
+        if  e.weight != None:
+            history += e.get_workout().date.strftime("%m/%d/%Y") + ' ' + \
+                e.name + ' ' + e.repetitions + ' executed with ' + str(e.weight) + 'Kg' + ' ' + \
+                e.score
+        else:
+            history += e.name + ' ' + e.repetitions
+        history += '\n'
+
 
     advice = get_exercise_suggestion(exercise.name, history)        
-    print(advice)
-
+    
     return render_template('exercise_info.html',
                         title=('Adivice'), 
                         advice = advice.content,
                         exercise=exercise,
+                        exercises=exercises,
+                        history = history,
                         workout= exercise.get_workout())
 
 @app.route('/workout/history',  methods=['GET', 'POST'])

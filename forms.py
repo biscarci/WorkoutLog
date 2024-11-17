@@ -43,10 +43,7 @@ class ExerciseForm(FlaskForm):
     choicesOptions =['', 'Barbell', 'Bumbell', 'Kettlebell', 'Sandbag', 'Row', 'Skyerg', 'Bike']
 
     name = StringField(('Name'), validators=[Optional()])
-    repetitions = IntegerField(('Repetitions'), default=None, validators=[Optional()])
-    weight_percentage = StringField(('Weight %'), validators=[Optional()])
-    rpe = IntegerField(('Rpe'), default=0, validators=[Optional()])
-    time = StringField(('Time Duration'), validators=[Optional()])
+    repetitions = StringField(('Repetitions'), default=None, validators=[Optional()])
     note = StringField(('Note'), validators=[Optional()])
     weight     = FloatField(('Weight'), default=0, validators=[Optional()])
     equipment  = SelectField(('Equipment'), choices=choicesOptions, validators=[Optional()])

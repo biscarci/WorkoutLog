@@ -11,10 +11,7 @@ from pydantic import BaseModel
 
 class Exercise(BaseModel):
     name: str
-    repetitions: str
-    weight_percentage: int
-    rpe: int
-    time: str
+    description: str
     note: str
 
 class Workout(BaseModel):
@@ -49,8 +46,8 @@ def get_month_start_end(month_number, year):
     if month_number == 12:
         end_date = datetime(year + 1, 1, 1) - timedelta(days=1)  # Last day of December
     else:
-        end_date = datetime(year, month_number + 1, 1) - timedelta(days=0)  # Last day of the month
-    
+        end_date = datetime(year, month_number + 1, 1) - timedelta(days=1)  # Last day of the month
+    print(start_date, end_date)
     return start_date, end_date
  
 def get_text_from_image_openai(image_path):
@@ -58,11 +55,10 @@ def get_text_from_image_openai(image_path):
     img_b64_str = encode_image(image_path)
 
     client = OpenAI( api_key=OPENAI_APIKEY)
-    prompt = "Extract from this image date:\
-              sets, reps or write the repetitions as string if sets and reps are not available, \
-              weight_percentage, rpe, time, for each the workouts. \
-              If some fields are missing use None ad default value \
-              If the exercises are part of a workout, consider them as unique exercise"
+    prompt = "In this image is described one or more workout. Extract from this image:\
+              The date, the type of the workout for each workout. \
+              For each workout extract the movement name of the exercise, the  description of the workout\
+              If some fields are missing use None ad default value"
 
     completion = client.beta.chat.completions.parse(
         model="gpt-4o",
@@ -87,10 +83,9 @@ def get_text_from_image_openai(image_path):
         print(w.name)
         for ex in w.exercises:
             print(ex.name)
-            print(ex.repetitions)
+            print(ex.description)
     
     return workoutofday
-
 
 
 def get_exercise_suggestion(exercise, history):
@@ -98,15 +93,19 @@ def get_exercise_suggestion(exercise, history):
     prompt = "Extract from this image date, type, duration, exercises for each the workouts"
 
     completion = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful crossfit coach."},
-                {
-                    "role": "user",
-                    "content": "Suggest sintetically the best weigth for the following exercise:"+exercise+" in italian language analyzing the previous exercises:"+history
-                }
-            ]
-        )
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are an experienced and helpful CrossFit coach, providing advice tailored to the user's workout history."},
+        {
+            "role": "user",
+            "content": (
+                "In Italian, suggest the optimal weight for the exercise: " + exercise + 
+                ", based on the following workout history: " + history + 
+                ". Provide a concise yet precise recommendation."
+            )
+        }
+    ]
+)
 
 
     suggestion = completion.choices[0].message

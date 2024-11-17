@@ -28,26 +28,15 @@
         <fieldset class="col-12">
             <legend>Intensity</legend>
             <div class="row">
-                <div class="col-2">
+                <div class="col">
                     {{ render_field(form.repetitions, class_="form-control", placeholder="Repetitions") }}
                 </div>
                 
             </div>
-            <div class="row">
-                <div class="col">
-                    {{ render_field(form.weight_percentage, class_="form-control", placeholder="Weight %") }}
-                </div>
-                <div class="col">
-                    {{ render_field(form.rpe, class_="form-control", placeholder="RPE") }}
-                </div>
-            </div>
+            
         </fieldset>
 
-        <!-- Time -->
-        <div class="col-12">
-            {{ render_field(form.time, class_="form-control", placeholder="Time") }}
-        </div>
-        
+             
         <!-- Peso, Attrezzatura e Punteggio -->
         <fieldset class="col-12">
             <legend>Additional Info</legend>

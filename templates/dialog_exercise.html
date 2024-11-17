@@ -11,17 +11,23 @@
         <div class="modal-body text-center">
           <!-- Contenuto dei dettagli dell'esercizio -->
           <p class="name">
-            {% if exercise.sets !=0 and  exercise.reps !=0 %} {{exercise.sets}} x {{exercise.reps}} &nbsp; {% endif %}
-            {% if exercise.sets ==0 and  exercise.reps !=0 %} {{exercise.reps}} &nbsp; {% endif %}
             {{exercise.name}}  &nbsp;
-            {% if exercise.weight_percentage !=0 %}{{exercise.weight_percentage}}% &nbsp; {% endif %}
-            {% if exercise.rpe !=0 %}&nbsp; RPE &nbsp;{{exercise.rpe}} {% endif %}
           </p>       
+          <p class="text-white-50">
+            {{exercise.repetitions}}&nbsp;
+          </p>
+          <hr>
           <p id="content-{{ exercise.id }}">
             {{ quotes[loop.index] }}
           </p>
+          <hr>
           <p id="request-{{ exercise.id }}">
-            <a id="submit-button" class="btn-add-workout" onclick="handleClick({{exercise.id}})" href="{{ url_for('exercise_info', id=exercise.id) }}">
+            <a id="submit-button" 
+              class="btn-add-workout" 
+              onclick="handleClick({{exercise.id}})" 
+              href="{{ url_for('exercise_info', id=exercise.id) }}"
+              style="text-decoration: none;"  
+            >
               <span id="button-text">Chiedi</span>
               <span id="loading-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
             </a> 

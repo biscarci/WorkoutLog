@@ -12,13 +12,27 @@
 </style>
 <div class="container">
     <h1 class="text-center mb-3">Advice For Exercise Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
-    <p>
-        {{exercise.name}}
-    </p>
-    <p>
-        {{advice}}
-    </p>
+    <hr>
+    <h3 class="text-center">
+        {{exercise.name}}  &nbsp; <small class="text-center text-white-50"> {{ exercise.repetitions }}</small>
+    </h3>
     
+    <hr>
+    {% for e in exercises %}
+    <span>
+        {{ e.get_workout().date.strftime("%d/%m/%Y") }}&nbsp; - &nbsp;  {{e.name}} &nbsp; 
+        <small class="text-white-50"> {{e.repetitions}} </small>&nbsp;|&nbsp; <small class="text-end"> {{ e.weight }} Kg  {{e.score}}</small> <br>
+    </span>    
+    {% endfor %}
+    <hr>
+    <p>
+        <small>
+            {{advice}}
+        </small>
+    </p>
+    <hr>
+    {% include "rm_calculator.html" %}
+
 </div>
 
 <!-- Barra in basso per aggiungere workout -->

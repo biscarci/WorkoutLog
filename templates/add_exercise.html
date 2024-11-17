@@ -13,6 +13,7 @@
 <div class="container">
     <h1 class="text-center mb-3">Add Exercise Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
     
+
     <form class="row g-1" method="POST" action="{{ url_for('add_exercise', id=workout.id) }}">
         {{ form.csrf_token() }}
         
@@ -28,29 +29,15 @@
         <fieldset class="col-12">
             <legend>Intensity</legend>
             <div class="row">
-                <div class="col-2">
-                    {{ render_field(form.sets, class_="form-control", placeholder="Sets") }}
-                </div>
-                <div class="col-auto">X</div>
-                <div class="col-2">
-                    {{ render_field(form.reps, class_="form-control", placeholder="Reps") }}
-                </div>
-            </div>
-            <div class="row">
                 <div class="col">
-                    {{ render_field(form.weight_percentage, class_="form-control", placeholder="Weight %") }}
+                    {{ render_field(form.repetitions, class_="form-control", placeholder="Repetitions") }}
                 </div>
-                <div class="col">
-                    {{ render_field(form.rpe, class_="form-control", placeholder="RPE") }}
-                </div>
+                
             </div>
+            
         </fieldset>
 
-        <!-- Time -->
-        <div class="col-12">
-            {{ render_field(form.time, class_="form-control", placeholder="Time") }}
-        </div>
-        
+             
         <!-- Peso, Attrezzatura e Punteggio -->
         <fieldset class="col-12">
             <legend>Additional Info</legend>
