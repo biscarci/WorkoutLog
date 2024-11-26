@@ -2,16 +2,19 @@
 <div class="month-slider d-flex justify-content-center align-items-center mb-3">
     <a 
         id="prevMonth" 
-        class="btn-arrow" 
+        class="btn btn-outline-warning btn-arrow me-2" 
         href="{{ url_for('select_workout_date', month=date.month-1, year=date.year) }}"
         ><i class="bi bi-chevron-left"></i></a>
     <span id="currentMonth" class="mx-3">{{date.strftime("%B %Y").title()}}</span>
     <a 
         id="nextMonth" 
-        class="btn-arrow"
+        class="btn btn-outline-warning btn-arrow ms-2"
         href="{{ url_for('select_workout_date', month=date.month+1, year=date.year) }}"
         ><i class="bi bi-chevron-right"></i></a>
 </div>
+
+
+
 
 {% set months = [
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", 
@@ -101,21 +104,8 @@
         text-align: center;
     }
 
-    .btn-arrow {
-        background-color: #2a2a2a;
-        color: #f5f5f5;
-        border: none;
-        font-size: 1.5rem;
-        width: 40px;
-        height: 40px;
+    ì.btn-arrow {
         border-radius: 50%;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        text-decoration: none;
-    }
-
-    .btn-arrow:hover {
-        background-color: #ffcc33;
     }
 
     #currentMonth {

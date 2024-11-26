@@ -90,25 +90,35 @@ def get_text_from_image_openai(image_path):
 
 def get_exercise_suggestion(exercise, history):
     client = OpenAI( api_key=OPENAI_APIKEY)
-    prompt = "Extract from this image date, type, duration, exercises for each the workouts"
-
+    
+    if history !="":
+        content = ("Basandoti sulla seguente cronologia di allenamento:\n\n" + history + 
+                    "\n\nConsiglia il peso ideale da utilizzare per il seguente esercizio: " + exercise + 
+                    ". Tieni conto della progressione passata e assicurati che il consiglio sia chiaro e preciso. "
+                    "Includi anche eventuali avvertenze per evitare infortuni.")
+    else:
+        content = ("Non avendo una cronologia di allenamento, consiglia il peso ideale da utilizzare per il seguente esercizio: " + exercise + 
+                    ". Assicurati che il consiglio sia chiaro e preciso. "
+                    "Includi anche eventuali avvertenze per evitare infortuni.")
+    
     completion = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "system", "content": "You are an experienced and helpful CrossFit coach, providing advice tailored to the user's workout history."},
-        {
-            "role": "user",
-            "content": (
-                "In Italian, suggest the optimal weight for the exercise: " + exercise + 
-                ", based on the following workout history: " + history + 
-                ". Provide a concise yet precise recommendation."
-            )
-        }
-    ]
-)
-
-
-    suggestion = completion.choices[0].message
+        model="gpt-3.5-turbo-1106",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an experienced and professional CrossFit coach. Your goal is to analyze the user's workout history "
+                    "and suggest the optimal weight for their exercise. Provide detailed but concise advice tailored to the user's progress, "
+                    "ensuring safety and effective progression. Respond in Italian."
+                )
+            },
+            {
+                "role": "user",
+                "content": content
+            }
+        ]
+    )
+    suggestion = completion.choices[0].message.content
 
     return suggestion
 

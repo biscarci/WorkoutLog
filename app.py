@@ -51,6 +51,7 @@ class Exercise(db.Model):
     note = db.Column(db.String(150), nullable=True)
     weight = db.Column(db.Float, nullable=True)
     score = db.Column(db.String(50), nullable=True)
+    advice = db.Column(db.String(2000), nullable=True)
     equipment = db.Column(db.String(50), nullable=True)
     date = db.Column(db.DateTime, default=datetime.now)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
@@ -344,7 +345,6 @@ def delete_exercise(id):
 @login_required
 def exercise_info(id): 
     exercise = Exercise.query.get_or_404(id)
-    print(exercise.name)
     if 'back squat' in exercise.name: key = 'squat'
     elif 'front squat' in exercise.name: key = 'front squat'
     elif 'push press' in exercise.name: key = 'push press'
@@ -354,8 +354,7 @@ def exercise_info(id):
     elif 'deadlift' in exercise.name: key = 'squat'
     elif 'bench press' in exercise.name: key = 'bench press'
     else: key = exercise.name
-    print('SEARCH KEY', key)
-    exercises = Exercise.query.filter(Exercise.name.icontains(key)).order_by(Exercise.date.desc()).all()
+    exercises = Exercise.query.filter(Exercise.name.icontains(key), Exercise.id != id).order_by(Exercise.date.desc()).all()
 
     history = ''
     for e in exercises:
@@ -367,16 +366,18 @@ def exercise_info(id):
             history += e.name + ' ' + e.repetitions
         history += '\n'
 
+    if exercise.advice == None:
+        exercise.advice = get_exercise_suggestion(exercise.name, history)    
+        db.session.commit()    
+   
 
-    advice = get_exercise_suggestion(exercise.name, history)        
-    
     return render_template('exercise_info.html',
                         title=('Adivice'), 
-                        advice = advice.content,
-                        exercise=exercise,
-                        exercises=exercises,
+                        advice = exercise.advice,
+                        exercise = exercise,
+                        exercises = exercises,
                         history = history,
-                        workout= exercise.get_workout())
+                        workout = exercise.get_workout())
 
 @app.route('/workout/history',  methods=['GET', 'POST'])
 @login_required

@@ -4,13 +4,25 @@
 {% block content %}
 <div class="container">
     <div class="row">
-        <h1 class="text-center">Add Workout</h1>
-        <form method="POST" action="{{ url_for('add_workout') }}">
-            {{ form.csrf_token() }}
-            {{ render_form(form) }}
-        </form>
+        <h1 class="text-center w-100 mb-4">Add Workout</h1> <!-- 'w-100' assicura che l'intestazione occupi tutta la larghezza -->
+    </div>
+    <div class="row justify-content-center mb-3">
+        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
+            <a class="btn btn-add-workout btn-block" href="{{ url_for('upload_workout') }}" role="button" aria-expanded="false">
+                Upload Workout From an Image
+            </a>
+        </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <form method="POST" action="{{ url_for('add_workout') }}">
+                {{ form.csrf_token() }}
+                {{ render_form(form) }}
+            </form>
+        </div>
     </div>
 </div>
+
         
   
 <!-- Barra in basso per aggiungere workout -->
