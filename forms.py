@@ -8,6 +8,7 @@ from datetime import datetime
 # Form di registrazione
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Length(min=2, max=200)])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Registrati')

@@ -13,6 +13,7 @@ import click
 from flask.cli import with_appcontext
 import locale
 from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 locale.setlocale(locale.LC_ALL, 'it_IT')      
 
@@ -49,6 +50,7 @@ class User(UserMixin, db.Model):
 
     def has_super_access(self):
         return self.is_superuser
+    
 
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -77,6 +79,28 @@ class Exercise(db.Model):
     def get_workout(self):
         w = Workout.query.get_or_404(self.workout_id)
         return w
+
+class Log(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user = db.Column(db.String(200), nullable=True)
+    action = db.Column(db.String(200), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+def logger(user_id, action):
+    if user_id != None:
+        u = User.query.get(int(user_id))
+        l = Log(
+            user = u.username,
+            action = action
+        )
+    else:
+        l = Log(
+            user = '---',
+            action = action
+        )
+    db.session.add(l)
+    db.session.commit()
 
 def superuser_required(f):
     @wraps(f)
@@ -180,6 +204,56 @@ def admin_dashboard():
     )
 
 
+@app.route('/admin/dashboard')
+@login_required
+def admin_users():
+    # Check if user is a superuser
+    if not current_user.is_superuser:
+        abort(403)  # Forbidden access
+    
+    # User Statistics
+    total_users = User.query.count()
+    active_users = User.query.filter(User.last_login > datetime.utcnow() - timedelta(days=30)).count()
+    new_users = User.query.filter(User.created_at > datetime.utcnow() - timedelta(days=30)).count()
+
+    # Workout Statistics
+    total_workouts = Workout.query.count()
+    workouts_this_month = Workout.query.filter(
+        Workout.date > datetime.utcnow() - timedelta(days=30)
+    ).count()
+    
+    # Most active workout type
+    most_active_workout_type = db.session.query(
+        Workout.type, 
+        db.func.count(Workout.id).label('type_count')
+    ).group_by(Workout.type).order_by(
+        db.text('type_count DESC')
+    ).first()[0] if total_workouts > 0 else 'N/A'
+
+    # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
+    recent_activities = []  # Replace with actual query from your activity log
+
+    # System Status (these would be actual system metrics)
+    db_connections = 10  # Example placeholder
+    server_uptime = '3 days 4 hours'  # Example placeholder
+    last_backup = datetime.utcnow() - timedelta(days=1)
+
+    return render_template(
+        'admin_dashboard.html', 
+        title='Admin Dashboard',
+        total_users=total_users,
+        active_users=active_users,
+        new_users=new_users,
+        total_workouts=total_workouts,
+        workouts_this_month=workouts_this_month,
+        most_active_workout_type=most_active_workout_type,
+        recent_activities=recent_activities,
+        db_connections=db_connections,
+        server_uptime=server_uptime,
+        last_backup=last_backup
+    )
+
+
 # Rotte principali
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -188,13 +262,16 @@ def register():
         hashed_password = generate_password_hash(form.password.data)
         user = User(
             username=form.username.data, 
+            email=form.email.data, 
             password=hashed_password,
             is_superuser=False
             )
         db.session.add(user)
         db.session.commit()
         flash('Registrazione avvenuta con successo!', 'success')
+        logger(user.id,'Registrazione nuovo utente')
         return redirect(url_for('login'))
+
     return render_template('register.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -207,14 +284,18 @@ def login():
             # Redirect superusers to admin dashboard
             if user.is_superuser:
                 return redirect(url_for('admin_dashboard'))
+            logger(user.id,'Login success')
             return redirect(url_for('dashboard'))
+
         flash('Login non riuscito. Controlla username e password.', 'danger')
+        logger(None, 'Login fallito'+form.username.data)
     return render_template('login.html', form=form)
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
+    logger(current_user.id,'Logout utente')
     return redirect(url_for('login'))
 
 @app.route('/', methods=['GET'])
@@ -301,7 +382,8 @@ def upload_workout():
                     )
                     db.session.add(exercise)
                     db.session.commit()
-            flash('Esercizi estratti e salvati con successo!')
+            flash('Esercizi caricati e salvati con successo!')
+            logger(current_user.id,'Load screenshot workout')
         else:
             print('Qualcosa è andato storto')
         return redirect(url_for('dashboard'))
@@ -323,6 +405,7 @@ def add_workout():
         db.session.add(w)
         db.session.commit()
         flash('Workout inserito con successo!', 'success')
+        logger(current_user.id,'New workout created')
         return redirect(url_for('dashboard'))
     
 
@@ -348,6 +431,7 @@ def add_exercise(id):
         db.session.add(e)
         db.session.commit()
         flash('Esercizio inserito con successo!', 'success')
+        logger(current_user.id,'New exercise added to workout'+w.date.strftime('%d-%m-%Y'))
         return redirect(url_for('dashboard'))
     
 
@@ -384,6 +468,7 @@ def delete_workout(id):
         db.session.delete(workout)
         db.session.commit()
         flash('Allenamento eliminato con successo.', 'success')
+        logger(current_user.id,'Deleted workout '+workout.date.strftime('%d-%m-%Y'))
         return redirect(url_for('dashboard'))
 
 @app.route('/workout/edit/<int:id>', methods=['GET', 'POST'])
@@ -397,6 +482,8 @@ def edit_workout(id):
         w.duration = form.duration.data 
         db.session.commit()
         flash('Workout aggiornato con successo!', 'success')
+        logger(current_user.id,'Modified workout '+w.date.strftime('%d-%m-%Y'))
+
         return redirect(url_for('dashboard'))
     elif request.method == 'GET':
         form.date.data = w.date
@@ -422,6 +509,7 @@ def edit_exercise(id):
         e.equipment = form.equipment.data
         e.score = form.score.data
         db.session.commit()
+        logger(current_user.id,'Modified exercise '+e.name+' workout '+w.date.strftime('%d-%m-%Y'))
         flash('Esercizio aggiornato con successo!', 'success')
         return redirect(url_for('dashboard'))
     elif request.method == 'GET':
@@ -441,19 +529,21 @@ def edit_exercise(id):
 @login_required
 def delete_exercise(id):
     # Trova l'allenamento da eliminare basato sull'id
-    exercise = Exercise.query.get_or_404(id)
-    
+    e = Exercise.query.get_or_404(id)
+    w = e.get_workout()
     # Verifica che l'allenamento appartenga all'utente corrente
-    if exercise.get_workout().user_id != current_user.id:
+    if e.get_workout().user_id != current_user.id:
         flash('Non sei autorizzato a eliminare questo esercizio.', 'danger')
         return redirect(url_for('dashboard'))
 
     # Se il metodo è POST, conferma l'eliminazione
     if request.method == 'POST':
         # Rimuovi l'allenamento dal database
-        db.session.delete(exercise)
+        db.session.delete(e)
         db.session.commit()
         flash('Esercizio eliminato con successo.', 'success')
+        logger(current_user.id,'Deleted exercise '+e.name+' workout '+w.date.strftime('%d-%m-%Y'))
+
         return redirect(url_for('dashboard'))
 
 @app.route('/exercise/info/<int:id>', methods=['GET'])
@@ -482,7 +572,9 @@ def exercise_info(id):
         history += '\n'
 
     if exercise.advice == None:
-        exercise.advice = get_exercise_suggestion(exercise.name, history)    
+        exercise.advice = get_exercise_suggestion(exercise.name, history)
+        w = exercise.get_workout()
+        logger(current_user.id,'Get advice for exercise '+exercise.name+' workout '+w.date.strftime('%d-%m-%Y'))
         db.session.commit()    
    
 
@@ -494,23 +586,48 @@ def exercise_info(id):
                         history = history,
                         workout = exercise.get_workout())
 
-@app.route('/workout/history',  methods=['GET', 'POST'])
+@app.route('/workout/history', methods=['GET', 'POST'])
 @login_required
 def workout_history():
-    return render_template('exercise_history.html',title=('Workout History'))
+    if request.method == 'GET':
+        # Mostra la pagina iniziale senza risultati filtrati
+        return render_template(
+            'history.html',
+            title='Workout History',
+            exercises=None
+        )
 
-
-@app.route('/api/endpoints', methods=['GET'])
-def list_endpoints():
-    endpoints = []
-    for rule in app.url_map.iter_rules():
-        # Aggiungi informazioni sugli endpoint
-        endpoints.append({
-            "endpoint": rule.endpoint,
-            "methods": list(rule.methods - {'HEAD', 'OPTIONS'}),
-            "url": rule.rule
-        })
-    return jsonify(endpoints)
+    elif request.method == 'POST':
+        # Recupera il parametro di ricerca
+        key = request.form.get('exercise_key', '').strip()
+        
+        # Se il campo di ricerca è vuoto, mostra un messaggio di errore
+        if not key:
+            flash('Please enter a valid search term.', 'warning')
+            return redirect(url_for('workout_history'))
+        
+        try:
+            # Filtra gli esercizi basandoti sul nome (case-insensitive) e ordina per data decrescente
+            exercises = Exercise.query.filter(
+                Exercise.name.ilike(f'%{key}%')  # `ilike` è cross-DB compatibile per ricerche case-insensitive
+            ).order_by(Exercise.date.desc()).all()
+            
+            # Verifica se ci sono risultati
+            if not exercises:
+                flash(f'No exercises found for "{key}".', 'info')
+        
+        except SQLAlchemyError as e:
+            # Gestione errori database
+            flash('An error occurred while searching. Please try again later.', 'danger')
+            exercises = None
+        
+        # Renderizza la pagina con i risultati
+        return render_template(
+            'history.html',
+            title='Workout History',
+            exercise_key=key,
+            exercises=exercises
+        )
 
 if __name__ == '__main__':
     app.run(debug=True)

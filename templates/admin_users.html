@@ -1,0 +1,51 @@
+
+{% extends "base.html" %} 
+
+{% block content %}
+    <style>
+        td  {font-size: small;}
+        th  {font-size: medium;}
+    </style>
+    <div class="container">
+        <h1 class="text-center">{{title}}</h1>
+        <div class="row mt-3">
+            <div class="col-12">
+                {% if users is not none %}
+                    <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                        <tr>
+                            <th> Username </th>
+                            <th> Password </th>
+                            <th> Email  </th>
+                            <th> Last login </th>
+                            <th> Created at </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td> {{u.username }}</td>
+                            <td> {{u.password }}</td>
+                            <td> {{u.email }}</td>
+                            <td> {{u.last_login.strftime("%d/%m/%Y %H-%m") }}</td>
+                            <td> {{u.created_at.strftime("%d/%m/%Y %H-%m") }}</td>
+                            <td> </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                {% else %}
+                    <p>No users found.</p>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}

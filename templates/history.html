@@ -2,6 +2,71 @@
 {% extends "base.html" %} 
 
 {% block content %}
-    <h1 class="text-center">{{title}}</h1>
-   
+    <style>
+        td  {font-size: small;}
+        th  {font-size: medium;}
+    </style>
+    <div class="container">
+        <h1 class="text-center">{{title}}</h1>
+        <div class="row mt-3">
+            <div class="col-12">
+            
+                <div class="container text-warning p-3 rounded">
+                <!-- Form di ricerca -->
+                <form method="POST" action="{{ url_for('workout_history') }}">
+                    <div class="input-group mb-3">
+                        <input class="form-control" type="text" name="exercise_key" value="{{ exercise_key or '' }}" placeholder="Search exercises">
+                        <button class="btb btn-add-workout" type="submit">Search</button>
+                    </div>
+                </form>
+                <hr>
+                {% if exercises is not none %}
+                    <p>
+                        <h5>History
+                            <small class="text-white-50">{{ exercise_key }}</small>
+                        </h5>
+                    </p>
+
+                    <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                        <tr>
+                            <th> Date </th>
+                            <th> Name </th>
+                            <th> Weight % </th>
+                            <th> RPE </th>
+                            <th> Reps </th>
+                            <th> Time </th>
+                            <th> Lifted </th>
+                            <th> Score </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for e in exercises %}
+                        <tr>
+                            <td>{{ e.date.strftime("%d/%m/%Y") }}</td>
+                            <td>{{ e.name }}</td>
+                            <td>{% if e.weight_percentage %}    {{ e.weight_percentage }} {% endif %}</td>
+                            <td>{% if e.rpe %}    {{ e.rpe }} {% endif %}</td>
+                            <td>{% if e.repetitions %}    {{ e.repetitions }} {% endif %}</td>
+                            <td>{% if e.time %}    {{ e.time }} {% endif %}</td>
+                            <td>{% if e.weight %}    {{ e.weight }} {% endif %}</td>
+                            <td>{% if e.score %}    {{ e.score }} {% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                {% else %}
+                    <p>No exercises found.</p>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
 {% endblock %}

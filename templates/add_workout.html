@@ -1,24 +1,43 @@
 {% extends "base.html" %} 
-{% from 'bootstrap5/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_field %}
 
 {% block content %}
-<div class="container">
+<div class="container">   
     <div class="row">
         <h1 class="text-center w-100 mb-4">Add Workout</h1> <!-- 'w-100' assicura che l'intestazione occupi tutta la larghezza -->
-    </div>
-    <div class="row justify-content-center mb-3">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-add-workout btn-block" href="{{ url_for('upload_workout') }}" role="button" aria-expanded="false">
-                Upload Workout From an Image
-            </a>
-        </div>
     </div>
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
             <form method="POST" action="{{ url_for('add_workout') }}">
                 {{ form.csrf_token() }}
-                {{ render_form(form) }}
+                {{ render_field(form.date, class_="form-control") }}
+                {{ render_field(form.type, class_="form-control") }}
+                {{ render_field(form.duration, class_="form-control") }}
+                {{ render_field(form.note, class_="form-control") }}
+                
+                 <!-- Pulsante Add Workout centrale -->
+                 <div class="d-flex justify-content-center mt-4">
+                    {{ render_field(form.submit, class_="btn-add-workout") }}
+                </div>
             </form>
+        </div>
+    </div>
+    <hr>
+   
+    <div class="row justify-content-center mb-3 mt-4">
+        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
+            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('upload_workout') }}" role="button" aria-expanded="false">
+                <i class="bi bi-file-earmark-arrow-up"></i> Workout
+            </a>
+            
+        </div>
+        
+    </div>
+    <div class="row justify-content-center mb-3">
+        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
+            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('workout_history') }}" role="button" aria-expanded="false">
+                <i class="bi bi-clock-history"></i> History
+            </a>
         </div>
     </div>
 </div>

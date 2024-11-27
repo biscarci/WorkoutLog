@@ -19,15 +19,15 @@
       <div id="collapse{{loop.index}}" class="accordion-collapse collapse" aria-labelledby="heading{{loop.index}}" data-bs-parent="#workoutAccordion">
         <div class="accordion-body">
           <ul class="exercises list-unstyled">
-            {% if workout.note %}
-              <li class="note">{{ workout.note }}</li>
+            {% if workout.note != "None" and workout.note !=None %}
+              <li class="note">{{ workout.note | capitalize }}</li>
               <hr>
             {% endif %}
             
             {% for exercise in workout.exercise %}
               <li>
                 <span class="name">
-                  {{exercise.name}}  &nbsp;   
+                  {{exercise.name | capitalize }}  &nbsp;   
               {% if exercise.weight or exercise.score or exercise.equipment %}
                   &nbsp;|&nbsp;&nbsp;
                   <small class="text-white-50">
@@ -46,7 +46,9 @@
                 {{exercise.repetitions}}&nbsp;
               </li>
               {% if exercise.time != None %}<li class="p-0"> <span class="descr">{{exercise.time}}</span></li>{% endif %}
-              {% if exercise.note != None %}<li class="p-0"> <span class="note">{{exercise.note}}</span></li>{% endif %}
+              {% if workout.note != "None" and workout.note !=None %}
+                <li class="p-0"> <span class="note">{{exercise.note}}</span></li>
+              {% endif %}
               
               <div class="btn-group btn-group-sm d-flex justify-content-end" role="group" aria-label="...">
                 <button class="btn-dialog" data-bs-toggle="modal" data-bs-target="#exerciseModal-{{ exercise.id }}">

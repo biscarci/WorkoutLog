@@ -18,7 +18,7 @@
           </p>
           <hr>
           <p id="content-{{ exercise.id }}">
-            {{ quotes[loop.index] }}
+            {{ quotes[range(1, 11)|random - 1]  }}
           </p>
           <hr>
           <p id="request-{{ exercise.id }}">

@@ -109,7 +109,7 @@ def get_exercise_suggestion(exercise, history):
                 "content": (
                     "You are an experienced and professional CrossFit coach. Your goal is to analyze the user's workout history "
                     "and suggest the optimal weight for their exercise. Provide detailed but concise advice tailored to the user's progress, "
-                    "ensuring safety and effective progression. Respond in Italian."
+                    "ensuring safety and effective progression. Respond in Italian. Use max 80 words"
                 )
             },
             {
@@ -144,7 +144,8 @@ def get_exercise(exercises):
 
 
 def get_frasi_motivazionali():
-    array = ["Ciao Bestia! Sei pronto a spingere al massimo? Dimmi pure se hai bisogno di una mano per scegliere il peso perfetto!",
+    array = [
+        "Ciao Bestia! Sei pronto a spingere al massimo? Dimmi pure se hai bisogno di una mano per scegliere il peso perfetto!",
     "Super atleta in arrivo! 💪 Vuoi un consiglio per trovare il peso ideale e dominare l'allenamento? Sono qui per te!",
     "Oggi si fanno scintille! 🔥 Pronto a sollevare come mai prima? Chiedimi un suggerimento e spingiamo insieme!",
     "Forte oggi, invincibile domani! Vuoi che ti aiuti a scegliere il peso giusto per spingerti al massimo?",
@@ -173,7 +174,19 @@ def get_frasi_motivazionali():
     "Pronto a fare la differenza? Se hai bisogno di un consiglio sul peso, sono al tuo fianco!",
     "La potenza è nel dettaglio: fammi sapere se vuoi un suggerimento per scegliere il carico giusto!",
     "Se non sfidi il peso, non sfidi te stesso! Vuoi un aiuto per trovare il carico perfetto?",
-    "La forza è una scelta. Sei pronto? Chiedimi un consiglio e scegliamo il peso per l’allenamento perfetto!"]
+    "La forza è una scelta. Sei pronto? Chiedimi un consiglio e scegliamo il peso per l’allenamento perfetto!",
+    "Il sudore di oggi è la forza di domani! Vuoi un suggerimento sul carico per spingere al massimo?",
+    "Ogni chilogrammo conta! Dimmi se hai bisogno di aiuto per trovare il peso ideale per i tuoi obiettivi.",
+    "Spingi forte, vai lontano! Hai bisogno di un consiglio sul peso per superare il tuo limite?",
+    "Dai tutto quello che hai! Vuoi un aiuto per scegliere il carico perfetto per oggi?",
+    "Non si tratta solo di sollevare, ma di superare se stessi. Ti serve un consiglio sul peso?",
+    "Ogni serie è una vittoria! Dimmi se hai bisogno di aiuto per il carico giusto.",
+    "Il tuo potenziale non ha limiti! Vuoi che ti aiuti a scegliere il peso per portarti oltre?",
+    "Non mollare, non oggi! Hai dubbi sul peso giusto? Sono qui per te.",
+    "Oggi è il giorno giusto per essere straordinario! Vuoi un consiglio sul carico per spaccare tutto?",
+    "Un passo in più verso la tua versione migliore! Posso aiutarti a trovare il peso perfetto.",
+    "Ogni chilogrammo è un passo verso la tua forza interiore. Vuoi un suggerimento per scegliere il carico?"    
+    ]
 
     # Trova il numero massimo dell'array
     # max_value = max(array)
