@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container px-2">
+  <h1 class="text-center mb-4">Admin Dashboard</h1>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="bg-dark p-3 rounded">
+        <h5 class="text-warning">User Statistics</h5>
+        <ul class="list-unstyled">
+          <li> <h6 class="text-white-50">Total Users </h6> {{ total_users }} </li>
+          <li class="mt-2"> <h6 class="text-white-50">Active Users </h6>{{ active_users }}</li>
+          <li class="mt-2"> <h6 class="text-white-50">New Users (30 days) </h6>{{ new_users }} </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="bg-dark p-3 rounded">
+        <h5 class="text-warning">Workout Analytics</h5>
+        <ul class="list-unstyled">
+          <li><h6 class="text-white-50">Total Workouts </h6> {{ total_workouts }} </li>
+          <li class="mt-2"><h6 class="text-white-50">Monthly Workouts </h6> {{ workouts_this_month }} </li>
+          <li class="mt-2"><h6 class="text-white-50">Popular Workout </h6> {{ most_active_workout_type }} </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="bg-dark p-3 rounded">
+        <h5 class="text-warning">System Health</h5>
+        <ul class="list-unstyled">
+          <li> <h6 class="text-white-50"> Server Uptime  </h6> {{ server_uptime }}</li>
+          <li class="mt-2"> <h6 class="text-white-50"> Last Backup </h6> {{ last_backup }} </li>
+          <li class="mt-2"> <h6 class="text-white-50"> DB Connections </h6> {{ db_connections }} </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-12">
+      <div class="bg-dark text-warning p-3 rounded">
+        <h5>Recent Activities</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-striped">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for activity in recent_activities %}
+              <tr>
+                <td>{{ activity.user }}</td>
+                <td>{{ activity.action }}</td>
+                <td>{{ activity.timestamp.strftime("%H:%M %d/%m") }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar fixed-bottom">
+  <button class="btn-add-workout w-100">
+    Add New Activity
+  </button>
+</div>
+{% endblock %}

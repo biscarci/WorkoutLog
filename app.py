@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user, UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,8 +8,11 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
 from utils import get_text_from_image_openai, allowed_file,get_exercise_suggestion, get_exercise, get_month_start_end, get_frasi_motivazionali
-
+from functools import wraps
+import click
+from flask.cli import with_appcontext
 import locale
+from datetime import datetime, timedelta
 
 locale.setlocale(locale.LC_ALL, 'it_IT')      
 
@@ -24,13 +27,28 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 bootstrap = Bootstrap5(app)
+admin_bp = Blueprint('admin', __name__)
 
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    last_login = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_superuser = db.Column(db.Boolean, default=False)
+
     workouts = db.relationship('Workout', backref='user', lazy=True)
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def has_super_access(self):
+        return self.is_superuser
 
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,7 +77,15 @@ class Exercise(db.Model):
     def get_workout(self):
         w = Workout.query.get_or_404(self.workout_id)
         return w
-    
+
+def superuser_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_superuser:
+            abort(403)  # Forbidden access
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.before_request
 def create_tables():
     # The following line will remove this handler, making it
@@ -72,13 +98,99 @@ def create_tables():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def create_superuser(username, email, password):
+    existing_user = User.query.filter_by(username=username).first()
+    existing_superuser = User.query.filter_by(is_superuser=True).first()
+    if existing_user or existing_superuser:
+        return False
+    hashed_password = generate_password_hash(password)
+    superuser = User(
+        username=username, 
+        email=email, 
+        password=hashed_password,
+        is_superuser=True
+    )
+    db.session.add(superuser)
+    db.session.commit()
+    return True
+
+@click.command('create-superuser')
+@click.option('--username', prompt=True)
+@click.option('--email', prompt=True)
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True)
+@with_appcontext
+def create_superuser_command(username, email, password):
+    """Create a new superuser"""
+    if create_superuser(username, email, password):
+        click.echo('Superuser created successfully!')
+    else:
+        click.echo('Error: Superuser creation failed.')
+
+# Register the command with your Flask app
+app.cli.add_command(create_superuser_command)
+
+
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    # Check if user is a superuser
+    if not current_user.is_superuser:
+        abort(403)  # Forbidden access
+    
+    # User Statistics
+    total_users = User.query.count()
+    active_users = User.query.filter(User.last_login > datetime.utcnow() - timedelta(days=30)).count()
+    new_users = User.query.filter(User.created_at > datetime.utcnow() - timedelta(days=30)).count()
+
+    # Workout Statistics
+    total_workouts = Workout.query.count()
+    workouts_this_month = Workout.query.filter(
+        Workout.date > datetime.utcnow() - timedelta(days=30)
+    ).count()
+    
+    # Most active workout type
+    most_active_workout_type = db.session.query(
+        Workout.type, 
+        db.func.count(Workout.id).label('type_count')
+    ).group_by(Workout.type).order_by(
+        db.text('type_count DESC')
+    ).first()[0] if total_workouts > 0 else 'N/A'
+
+    # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
+    recent_activities = []  # Replace with actual query from your activity log
+
+    # System Status (these would be actual system metrics)
+    db_connections = 10  # Example placeholder
+    server_uptime = '3 days 4 hours'  # Example placeholder
+    last_backup = datetime.utcnow() - timedelta(days=1)
+
+    return render_template(
+        'admin_dashboard.html', 
+        title='Admin Dashboard',
+        total_users=total_users,
+        active_users=active_users,
+        new_users=new_users,
+        total_workouts=total_workouts,
+        workouts_this_month=workouts_this_month,
+        most_active_workout_type=most_active_workout_type,
+        recent_activities=recent_activities,
+        db_connections=db_connections,
+        server_uptime=server_uptime,
+        last_backup=last_backup
+    )
+
+
 # Rotte principali
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = generate_password_hash(form.password.data)
-        user = User(username=form.username.data, password=hashed_password)
+        user = User(
+            username=form.username.data, 
+            password=hashed_password,
+            is_superuser=False
+            )
         db.session.add(user)
         db.session.commit()
         flash('Registrazione avvenuta con successo!', 'success')
@@ -92,6 +204,9 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password, form.password.data):
             login_user(user)
+            # Redirect superusers to admin dashboard
+            if user.is_superuser:
+                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('dashboard'))
         flash('Login non riuscito. Controlla username e password.', 'danger')
     return render_template('login.html', form=form)
@@ -157,7 +272,7 @@ def upload_workout():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename) 
+            filepath = os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             wod = get_text_from_image_openai(filepath)
             os.remove(filepath)
@@ -382,10 +497,20 @@ def exercise_info(id):
 @app.route('/workout/history',  methods=['GET', 'POST'])
 @login_required
 def workout_history():
-    
-    
     return render_template('exercise_history.html',title=('Workout History'))
 
+
+@app.route('/api/endpoints', methods=['GET'])
+def list_endpoints():
+    endpoints = []
+    for rule in app.url_map.iter_rules():
+        # Aggiungi informazioni sugli endpoint
+        endpoints.append({
+            "endpoint": rule.endpoint,
+            "methods": list(rule.methods - {'HEAD', 'OPTIONS'}),
+            "url": rule.rule
+        })
+    return jsonify(endpoints)
 
 if __name__ == '__main__':
     app.run(debug=True)
