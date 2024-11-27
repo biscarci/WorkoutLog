@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .table-wrapper {
+    max-height: 350px;
+    overflow: auto;
+    max-width: none;
+    display:inline-block;
+  }
+</style>
+
 <div class="container px-2">
   <h1 class="text-center mb-4">Admin Dashboard</h1>
 
@@ -44,7 +53,7 @@
       <div class="bg-dark text-warning p-3 rounded">
         <h5>Recent Activities</h5>
         <div class="table-responsive">
-          <table class="table table-dark table-striped">
+          <table class="table table-dark table-striped table-wrapper">
             <thead>
               <tr>
                 <th>User</th>

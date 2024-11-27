@@ -181,7 +181,7 @@ def admin_dashboard():
     ).first()[0] if total_workouts > 0 else 'N/A'
 
     # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
-    recent_activities = []  # Replace with actual query from your activity log
+    recent_activities = Log.query.all()
 
     # System Status (these would be actual system metrics)
     db_connections = 10  # Example placeholder
@@ -288,14 +288,15 @@ def login():
             return redirect(url_for('dashboard'))
 
         flash('Login non riuscito. Controlla username e password.', 'danger')
-        logger(None, 'Login fallito'+form.username.data)
+        logger(None, 'Login fallito '+form.username.data)
     return render_template('login.html', form=form)
 
 @app.route('/logout')
 @login_required
 def logout():
-    logout_user()
     logger(current_user.id,'Logout utente')
+
+    logout_user()
     return redirect(url_for('login'))
 
 @app.route('/', methods=['GET'])
@@ -550,17 +551,11 @@ def delete_exercise(id):
 @login_required
 def exercise_info(id): 
     exercise = Exercise.query.get_or_404(id)
-    if 'back squat' in exercise.name: key = 'squat'
-    elif 'front squat' in exercise.name: key = 'front squat'
-    elif 'push press' in exercise.name: key = 'push press'
-    elif 'push jerk' in exercise.name: key = 'push jerk'
-    elif 'strict press' in exercise.name: key = 'strict press'
-    elif 'split jerk' in exercise.name: key = 'split jerk'
-    elif 'deadlift' in exercise.name: key = 'squat'
-    elif 'bench press' in exercise.name: key = 'bench press'
-    else: key = exercise.name
-    exercises = Exercise.query.filter(Exercise.name.icontains(key), Exercise.id != id).order_by(Exercise.date.desc()).all()
-
+    
+    exercises = Exercise.query.filter(
+                Exercise.name.ilike(f'%{exercise.name}%')  
+            ).order_by(Exercise.date.desc()).all()
+    
     history = ''
     for e in exercises:
         if  e.weight != None:
