@@ -204,7 +204,7 @@ def admin_dashboard():
     )
 
 
-@app.route('/admin/dashboard')
+@app.route('/admin/users')
 @login_required
 def admin_users():
     # Check if user is a superuser
