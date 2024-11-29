@@ -16,21 +16,25 @@
                         <thead>
                         <tr>
                             <th> Username </th>
-                            <th> Password </th>
                             <th> Email  </th>
                             <th> Last login </th>
                             <th> Created at </th>
+                            <th> Enabled </th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for u in users %}
                         <tr>
                             <td> {{u.username }}</td>
-                            <td> {{u.password }}</td>
                             <td> {{u.email }}</td>
-                            <td> {{u.last_login.strftime("%d/%m/%Y %H-%m") }}</td>
-                            <td> {{u.created_at.strftime("%d/%m/%Y %H-%m") }}</td>
-                            <td> </td>
+                            <td>{% if u.last_login %} {{u.last_login.strftime("%d/%m/%Y %H:%m") }} {% endif %}</td>
+                            <td>{% if u.created_at %} {{u.created_at.strftime("%d/%m/%Y %H:%m") }} {% endif %}</td>
+                            <td>{% if u.is_enabled == true %} 
+                                <h5 class="text-primary"><i class="bi bi-toggle-on " ></i></h5>
+                                {% else %} 
+                                <h5 class="text-secondary"><i class="bi bi-toggle-off"></i></h5>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                         </tbody>

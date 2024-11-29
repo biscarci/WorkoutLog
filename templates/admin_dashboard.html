@@ -1,14 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<style>
-  .table-wrapper {
-    max-height: 350px;
-    overflow: auto;
-    max-width: none;
-    display:inline-block;
-  }
-</style>
+
 
 <div class="container px-2">
   <h1 class="text-center mb-4">Admin Dashboard</h1>
@@ -22,7 +15,11 @@
           <li class="mt-2"> <h6 class="text-white-50">Active Users </h6>{{ active_users }}</li>
           <li class="mt-2"> <h6 class="text-white-50">New Users (30 days) </h6>{{ new_users }} </li>
         </ul>
+        <a class="btn btn-add-workout btn-block" href="{{ url_for('admin_users') }}" role="button" aria-expanded="false">GO</a>
+
       </div>
+      
+
     </div>
 
     <div class="col-12 col-md-4">
@@ -53,7 +50,7 @@
       <div class="bg-dark text-warning p-3 rounded">
         <h5>Recent Activities</h5>
         <div class="table-responsive">
-          <table class="table table-dark table-striped table-wrapper">
+          <table class="table table-dark table-striped">
             <thead>
               <tr>
                 <th>User</th>

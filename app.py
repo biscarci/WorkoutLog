@@ -12,7 +12,7 @@ from functools import wraps
 import click
 from flask.cli import with_appcontext
 import locale
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.exc import SQLAlchemyError
 
 locale.setlocale(locale.LC_ALL, 'it_IT')      
@@ -39,6 +39,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_superuser = db.Column(db.Boolean, default=False)
+    is_enabled = db.Column(db.Boolean, default=False)
 
     workouts = db.relationship('Workout', backref='user', lazy=True)
     
@@ -116,7 +117,13 @@ def create_tables():
     # only run on the first request
     app.before_request_funcs[None].remove(create_tables)
     db.create_all()
-    
+
+@app.before_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.now(timezone.utc)
+        db.session.commit()
+
 # Gestione login
 @login_manager.user_loader
 def load_user(user_id):
@@ -132,7 +139,8 @@ def create_superuser(username, email, password):
         username=username, 
         email=email, 
         password=hashed_password,
-        is_superuser=True
+        is_superuser=True,
+        is_enabled = True
     )
     db.session.add(superuser)
     db.session.commit()
@@ -154,7 +162,7 @@ def create_superuser_command(username, email, password):
 app.cli.add_command(create_superuser_command)
 
 
-@app.route('/admin/dashboard')
+@app.route('/admin/dashboard', methods=['GET'])
 @login_required
 def admin_dashboard():
     # Check if user is a superuser
@@ -181,7 +189,7 @@ def admin_dashboard():
     ).first()[0] if total_workouts > 0 else 'N/A'
 
     # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
-    recent_activities = Log.query.all()
+    recent_activities = Log.query.order_by(Log.timestamp.asc()).all()
 
     # System Status (these would be actual system metrics)
     db_connections = 10  # Example placeholder
@@ -204,54 +212,32 @@ def admin_dashboard():
     )
 
 
-@app.route('/admin/users')
+@app.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def admin_users():
     # Check if user is a superuser
     if not current_user.is_superuser:
         abort(403)  # Forbidden access
     
-    # User Statistics
-    total_users = User.query.count()
-    active_users = User.query.filter(User.last_login > datetime.utcnow() - timedelta(days=30)).count()
-    new_users = User.query.filter(User.created_at > datetime.utcnow() - timedelta(days=30)).count()
+    users = User.query.all()
 
-    # Workout Statistics
-    total_workouts = Workout.query.count()
-    workouts_this_month = Workout.query.filter(
-        Workout.date > datetime.utcnow() - timedelta(days=30)
-    ).count()
-    
-    # Most active workout type
-    most_active_workout_type = db.session.query(
-        Workout.type, 
-        db.func.count(Workout.id).label('type_count')
-    ).group_by(Workout.type).order_by(
-        db.text('type_count DESC')
-    ).first()[0] if total_workouts > 0 else 'N/A'
-
-    # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
-    recent_activities = []  # Replace with actual query from your activity log
-
-    # System Status (these would be actual system metrics)
-    db_connections = 10  # Example placeholder
-    server_uptime = '3 days 4 hours'  # Example placeholder
-    last_backup = datetime.utcnow() - timedelta(days=1)
 
     return render_template(
-        'admin_dashboard.html', 
-        title='Admin Dashboard',
-        total_users=total_users,
-        active_users=active_users,
-        new_users=new_users,
-        total_workouts=total_workouts,
-        workouts_this_month=workouts_this_month,
-        most_active_workout_type=most_active_workout_type,
-        recent_activities=recent_activities,
-        db_connections=db_connections,
-        server_uptime=server_uptime,
-        last_backup=last_backup
+        'admin_users.html', 
+        title='Admin Users List',
+        users=users,
+        
     )
+
+"""
+@app.route('/admin/user/disable/<int:id>', methods=['POST'])
+@login_required
+def admin_dashboard(id):
+    # Check if user is a superuser
+    if not current_user.is_superuser:
+        abort(403)  # Forbidden access
+"""
+    
 
 
 # Rotte principali
@@ -264,7 +250,8 @@ def register():
             username=form.username.data, 
             email=form.email.data, 
             password=hashed_password,
-            is_superuser=False
+            is_superuser=False,
+            is_enabled= True
             )
         db.session.add(user)
         db.session.commit()
@@ -311,7 +298,8 @@ def dashboard():
     workouts = Workout.query.filter_by(user_id=current_user.id).filter(
         Workout.date.between(start_date, end_date)
     ).order_by(Workout.date.asc()).all()
-
+    
+    
     return render_template('dashboard.html', 
                            title=('Workout Log'),
                            workouts=workouts,
@@ -553,7 +541,9 @@ def exercise_info(id):
     exercise = Exercise.query.get_or_404(id)
     
     exercises = Exercise.query.filter(
-                Exercise.name.ilike(f'%{exercise.name}%')  
+                Exercise.name.ilike(f'%{exercise.name}%'),
+                Exercise.weight != None,
+                Exercise.score !=None  
             ).order_by(Exercise.date.desc()).all()
     
     history = ''

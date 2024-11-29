@@ -1,16 +1,26 @@
 <!-- Selettore Slider per i Mesi -->
+
+{% set months_prev = 12 if month == 1 else month - 1 %}
+{% set months_next = 1 if month == 12 else month + 1 %}
+{% set year_prev = year - 1 if month == 1 else year %}
+{% set year_next = year + 1 if month == 12 else year %}
+
 <div class="month-slider d-flex justify-content-center align-items-center mb-3">
     <a 
         id="prevMonth" 
         class="btn btn-outline-warning btn-arrow me-2" 
-        href="{{ url_for('select_workout_date', month=date.month-1, year=date.year) }}"
-        ><i class="bi bi-chevron-left"></i></a>
-    <span id="currentMonth" class="mx-3">{{date.strftime("%B %Y").title()}}</span>
+        href="{{ url_for('select_workout_date', month=months_prev, year=year_prev) }}"
+        ><i class="bi bi-chevron-left"></i>
+    </a>
+    
+        <span id="currentMonth" class="mx-3">{{date.strftime("%B %Y").title()}}</span>
+    
     <a 
         id="nextMonth" 
         class="btn btn-outline-warning btn-arrow ms-2"
-        href="{{ url_for('select_workout_date', month=date.month+1, year=date.year) }}"
-        ><i class="bi bi-chevron-right"></i></a>
+        href="{{ url_for('select_workout_date', month=months_next, year=year_next) }}"
+        ><i class="bi bi-chevron-right"></i>
+    </a>
 </div>
 
 

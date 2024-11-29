@@ -94,12 +94,12 @@ def get_exercise_suggestion(exercise, history):
     if history !="":
         content = ("Basandoti sulla seguente cronologia di allenamento:\n\n" + history + 
                     "\n\nConsiglia il peso ideale da utilizzare per il seguente esercizio: " + exercise + 
-                    ". Tieni conto della progressione passata e assicurati che il consiglio sia chiaro e preciso. "
-                    "Includi anche eventuali avvertenze per evitare infortuni.")
+                    ". Tieni conto della progressione passata e assicurati che il consiglio sia chiaro e preciso ed usa un lessico gasante come un gymbro. "
+                    "Includi anche eventuali avvertenze per evitare infortuni. Usa come unità di misura i Kg se rischiesto per esercizi in cui è richiesto l'utilizzo di manubri o bilancieri")
     else:
         content = ("Non avendo una cronologia di allenamento, consiglia il peso ideale da utilizzare per il seguente esercizio: " + exercise + 
-                    ". Assicurati che il consiglio sia chiaro e preciso. "
-                    "Includi anche eventuali avvertenze per evitare infortuni.")
+                    ". Assicurati che il consiglio sia chiaro e preciso ed usa un un lessico gasante come un gymbro. "
+                    "Includi anche eventuali avvertenze per evitare infortuni. Usa come unità di misura i Kg se rischiesto per esercizi in cui è richiesto l'utilizzo di manubri o bilancieri")
     
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
@@ -109,7 +109,7 @@ def get_exercise_suggestion(exercise, history):
                 "content": (
                     "You are an experienced and professional CrossFit coach. Your goal is to analyze the user's workout history "
                     "and suggest the optimal weight for their exercise. Provide detailed but concise advice tailored to the user's progress, "
-                    "ensuring safety and effective progression. Respond in Italian. Use max 80 words"
+                    "ensuring safety and effective progression. Respond in Italian. Use max 90 words"
                 )
             },
             {
