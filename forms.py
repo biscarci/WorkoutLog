@@ -1,7 +1,7 @@
 # forms.py
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FileField, FloatField, SubmitField, DateField, SelectField, IntegerField
-from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Optional
+from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Optional, Email
 from flask_wtf.file import FileAllowed
 from datetime import datetime
 
@@ -59,3 +59,14 @@ class UpdateExerciseForm(ExerciseForm):
 # Form per l'aggiornamento dell'esercizio
 class AddExerciseForm(ExerciseForm):
     submit     = SubmitField('Add')
+
+
+class UpdateProfileForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Nuova Password', validators=[Optional()])
+    confirm_password = PasswordField('Conferma Password', validators=[Optional(), EqualTo('password')])
+    unlock_code = StringField('Unlock Profile', validators=[Optional()])
+
+    submit = SubmitField('Aggiorna Profilo')
+

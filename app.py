@@ -3,7 +3,8 @@ from flask import Flask, Blueprint, render_template, request, redirect, url_for,
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user, UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from forms import RegistrationForm, LoginForm, UpdateWorkoutForm, AddWorkoutForm, AddExerciseForm, UpdateExerciseForm, AddExerciseForm
+from forms import RegistrationForm, LoginForm, UpdateWorkoutForm, \
+AddWorkoutForm, AddExerciseForm, UpdateExerciseForm, AddExerciseForm, UpdateProfileForm
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
@@ -14,6 +15,9 @@ from flask.cli import with_appcontext
 import locale
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.exc import SQLAlchemyError
+import random
+import string
+
 
 locale.setlocale(locale.LC_ALL, 'it_IT')      
 
@@ -40,7 +44,10 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_superuser = db.Column(db.Boolean, default=False)
     is_enabled = db.Column(db.Boolean, default=False)
-
+    unlock_code = db.Column(db.String(10), nullable=True)  # Nuovo campo
+    unlock_attempt = db.Column(db.Integer, default=0)
+    demo_mode = db.Column(db.Boolean, default=False)
+    total_workouts_added = db.Column(db.Integer, default=0)
     workouts = db.relationship('Workout', backref='user', lazy=True)
     
     def set_password(self, password):
@@ -113,15 +120,15 @@ def superuser_required(f):
 
 @app.before_request
 def create_tables():
-    # The following line will remove this handler, making it
-    # only run on the first request
-    app.before_request_funcs[None].remove(create_tables)
-    db.create_all()
-
-@app.before_request
-def before_request():
+    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    # Controlla se il file esiste
+    if not os.path.exists(db_path):
+        db.create_all()
+   
     if current_user.is_authenticated:
-        current_user.last_seen = datetime.now(timezone.utc)
+        current_user.last_login = datetime.now(timezone.utc)
+        if current_user.total_workouts_added >= 30 and current_user.demo_mode:
+            current_user.is_enabled = False
         db.session.commit()
 
 # Gestione login
@@ -140,7 +147,8 @@ def create_superuser(username, email, password):
         email=email, 
         password=hashed_password,
         is_superuser=True,
-        is_enabled = True
+        is_enabled = True,
+        demo_mode = False
     )
     db.session.add(superuser)
     db.session.commit()
@@ -221,23 +229,60 @@ def admin_users():
     
     users = User.query.all()
 
+    # Prepara i dati per il template
+    for user in users:
+        user.toggle_icon = "bi bi-toggle-on text-primary" if user.is_enabled else "bi bi-toggle-off text-secondary"
+        user.demo_toggle_icon = "bi bi-toggle-on text-primary" if user.demo_mode else "bi bi-toggle-off text-secondary"
 
     return render_template(
         'admin_users.html', 
         title='Admin Users List',
         users=users,
-        
     )
 
-"""
-@app.route('/admin/user/disable/<int:id>', methods=['POST'])
+@app.route('/admin/manage_user/<int:id>', methods=['POST'])
 @login_required
-def admin_dashboard(id):
-    # Check if user is a superuser
-    if not current_user.is_superuser:
-        abort(403)  # Forbidden access
-"""
-    
+@superuser_required
+def manage_user(id):
+    """Pagina HTML per abilitare un utente."""
+    user = User.query.get_or_404(id)
+    user.is_enabled = not user.is_enabled
+    user.unlock_attempt = 0
+    db.session.commit()
+    flash(f"User {user.username} {"abilitato" if user.is_enabled else "disabilitato" } con successo.", "success")
+    logger(current_user.id, f"User: {user.username} {"enabled" if user.is_enabled else "disabled" }")
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/demo_user/<int:id>', methods=['POST'])
+@login_required
+@superuser_required
+def demo_mode_user(id):
+    """Pagina HTML per abilitare un utente."""
+    user = User.query.get_or_404(id)
+    user.demo_mode = not user.demo_mode
+    db.session.commit()
+    flash(f"Demo mode user: {user.username} {"abilitata" if user.demo_mode else "non abilitata" } ", "success")
+    logger(current_user.id, f"User {user.username} {"enabled" if user.is_enabled else "disabled" }")
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/api/admin/generate_unlock_code/<int:id>', methods=['POST'])
+@login_required
+@superuser_required
+def generate_unlock_code(id):
+    """API per generare un codice di sblocco per un utente."""
+    user = User.query.get_or_404(id)
+    # Genera un codice di sblocco casuale
+    characters = string.ascii_uppercase + string.ascii_lowercase + string.digits + "!@#$%^&*()-_=+[]{}<>"
+    unlock_code = ''.join(random.choices(characters, k=8))
+
+    user.unlock_code = unlock_code
+    user.is_enabled = False
+    user.unlock_attempt = 0
+    db.session.commit()
+    flash(f'Generated unlock key for {user.username}', "success")
+    logger(current_user.id, f'Generated unlock key for {user.username}')
+    return redirect(url_for('admin_users'))
 
 
 # Rotte principali
@@ -250,8 +295,9 @@ def register():
             username=form.username.data, 
             email=form.email.data, 
             password=hashed_password,
-            is_superuser=False,
-            is_enabled= True
+            is_superuser = False,
+            is_enabled = True,
+            demo_mode = True
             )
         db.session.add(user)
         db.session.commit()
@@ -285,6 +331,46 @@ def logout():
 
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    user = current_user
+    form = UpdateProfileForm()
+
+    if form.validate_on_submit():
+        # Gestione del codice di sblocco
+        if form.unlock_code.data:
+            if user.unlock_attempt >= 10:
+                flash('Il tuo profilo è bloccato a causa di troppi tentativi.', 'danger')
+            elif user.unlock_code == form.unlock_code.data:
+                user.is_enabled = True
+                user.unlock_code = None  # Resetta il codice dopo l'uso
+                user.unlock_attempt = 0  # Resetta i tentativi
+                user.demo_mode = False
+                db.session.commit()
+                flash('Il tuo profilo è stato sbloccato con successo!', 'success')
+            else:
+                user.unlock_attempt += 1
+                db.session.commit()
+                flash('Codice di sblocco non valido. Riprova.', 'warning')
+
+        # Aggiornamento delle informazioni del profilo
+        user.username = form.username.data
+        user.email = form.email.data
+        if form.password.data:
+            user.password = generate_password_hash(form.password.data)
+        db.session.commit()
+        flash('Il tuo profilo è stato aggiornato con successo.', 'success')
+
+        return redirect(url_for('profile'))
+
+    elif request.method == 'GET':
+        # Precompila il form con i dati dell'utente
+        form.username.data = user.username
+        form.email.data = user.email
+
+    return render_template('profile.html', form=form)
 
 @app.route('/', methods=['GET'])
 @app.route('/dashboard', methods=['GET'])
@@ -329,7 +415,13 @@ def select_workout_date(month, year):
 @app.route('/workout/upload', methods=['GET', 'POST'])
 @login_required
 def upload_workout():
-    if request.method == 'POST':
+    if not current_user.is_enabled:
+        flash('User not enabled', 'success')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST' and current_user.is_enabled:
+        current_user.total_workouts_added += 1
+        db.session.commit()
         # check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
@@ -376,14 +468,19 @@ def upload_workout():
         else:
             print('Qualcosa è andato storto')
         return redirect(url_for('dashboard'))
-                            
+           
     return render_template('upload.html', title=('Upload Workout'))
 
 @app.route('/workout/add', methods=['GET', 'POST'])
 @login_required
 def add_workout():
     form = AddWorkoutForm()
-    if form.validate_on_submit():
+    
+    if not current_user.is_enabled and request.method == 'POST':
+        flash('User not enabled', 'success')
+        return redirect(url_for('dashboard'))
+    
+    if form.validate_on_submit() and current_user.is_enabled:
         w = Workout(
                     date = form.date.data,
                     type = form.type.data,
@@ -391,11 +488,13 @@ def add_workout():
                     note = form.note.data,
                     user_id = current_user.id
                 )
+        current_user.total_workouts_added += 1
         db.session.add(w)
         db.session.commit()
         flash('Workout inserito con successo!', 'success')
         logger(current_user.id,'New workout created')
         return redirect(url_for('dashboard'))
+    
     
 
     return render_template('add_workout.html',

@@ -19,7 +19,7 @@
       <div id="collapse{{loop.index}}" class="accordion-collapse collapse" aria-labelledby="heading{{loop.index}}" data-bs-parent="#workoutAccordion">
         <div class="accordion-body">
           <ul class="exercises list-unstyled">
-            {% if workout.note != "None" and workout.note !=None %}
+            {% if workout.note != "None" and workout.note != None and workout.note != "" %}
               <li class="note">{{ workout.note | capitalize }}</li>
               <hr>
             {% endif %}
@@ -68,12 +68,15 @@
             {% include "dialog_exercise.html" %}
             {% endfor %}
             
-            {% if workout.score or workout.equipment%}<hr>{% endif %}
+            {% if workout.score or workout.equipment %}<hr>{% endif %}
             {% if workout.score %}<li>{{workout.score}}</li> {% endif %}
             {% if workout.equipment %}<li>{{workout.equipment}}</li> {% endif %}
             
           </ul>
-          <hr>
+          {% if not workout.exercise %} 
+          <span>Clicca su ➕ per aggiungere un nuovo esercizio</span>
+          {% endif %}
+          <hr> 
           <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
             <div class="btn-group btn-group-sm" role="group">
               <!-- Pulsante Modifica -->

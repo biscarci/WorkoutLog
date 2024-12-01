@@ -1,6 +1,17 @@
 
 {% extends "base.html" %} 
 
+<style>
+    .unlock-code {
+        cursor: pointer;
+        color: #007bff; /* Cambia colore se necessario */
+        text-decoration: underline; /* Indica che è interattivo */
+    }
+    .unlock-code:hover {
+        color: #0056b3; /* Colore al passaggio del mouse */
+    }
+</style>
+
 {% block content %}
     <style>
         td  {font-size: small;}
@@ -20,22 +31,46 @@
                             <th> Last login </th>
                             <th> Created at </th>
                             <th> Enabled </th>
+                            <th> Key </th>
+                            <th> Demo  Mode </th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for u in users %}
-                        <tr>
+                        {% if not u.is_superuser%}
+                        <tr class="align-middle">
                             <td> {{u.username }}</td>
                             <td> {{u.email }}</td>
-                            <td>{% if u.last_login %} {{u.last_login.strftime("%d/%m/%Y %H:%m") }} {% endif %}</td>
-                            <td>{% if u.created_at %} {{u.created_at.strftime("%d/%m/%Y %H:%m") }} {% endif %}</td>
-                            <td>{% if u.is_enabled == true %} 
-                                <h5 class="text-primary"><i class="bi bi-toggle-on " ></i></h5>
-                                {% else %} 
-                                <h5 class="text-secondary"><i class="bi bi-toggle-off"></i></h5>
-                                {% endif %}
+                            <td>{% if u.last_login %} {{ u.last_login.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</td>
+                            <td>{% if u.created_at %} {{ u.created_at.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</td>
+                            
+                            <td>
+                                <form action="{{ url_for('manage_user', id=u.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" aria-expanded="false" aria-label="Abilita/Disabilita utente" class="btn btn-link">
+                                        <i class="{{ u.toggle_icon }}"></i>
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <span class="unlock-code" onclick="copyToClipboard('{{ u.unlock_code }}')">
+                                    {{ u.unlock_code }}
+                                </span>
+                                <form action="{{ url_for('generate_unlock_code', id=u.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" aria-expanded="false" aria-label="key utente" class="btn btn-link text-warning">
+                                         <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </form>
+                            </td>
+
+                            <td>
+                                <form action="{{ url_for('demo_mode_user', id=u.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" aria-expanded="false" aria-label="Abilita/Disabilita demo utente" class="btn btn-link">
+                                        <i class="{{ u.demo_toggle_icon }}"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                         </tbody>
                     </table>
@@ -47,6 +82,17 @@
             </div>
         </div>
     </div>
+
+<script>
+    // Funzione per copiare il codice nella clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            console.log('Codice copiato nella clipboard: ' + text); // Facoltativo: mostra un messaggio di conferma
+        }).catch(function(error) {
+            console.log('Errore nel copiare il codice: ' + error);
+        });
+    }
+</script>
 
 <!-- Barra in basso per aggiungere workout -->
 <div class="bottom-bar">
