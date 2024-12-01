@@ -249,8 +249,8 @@ def manage_user(id):
     user.is_enabled = not user.is_enabled
     user.unlock_attempt = 0
     db.session.commit()
-    flash(f"User {user.username} {"abilitato" if user.is_enabled else "disabilitato" } con successo.", "success")
-    logger(current_user.id, f"User: {user.username} {"enabled" if user.is_enabled else "disabled" }")
+    flash(f"User {user.username} {'abilitato' if user.is_enabled else 'disabilitato' } con successo.", "success")
+    logger(current_user.id, f"User: {user.username} {'enabled' if user.is_enabled else 'disabled' }")
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/demo_user/<int:id>', methods=['POST'])
@@ -261,8 +261,8 @@ def demo_mode_user(id):
     user = User.query.get_or_404(id)
     user.demo_mode = not user.demo_mode
     db.session.commit()
-    flash(f"Demo mode user: {user.username} {"abilitata" if user.demo_mode else "non abilitata" } ", "success")
-    logger(current_user.id, f"User {user.username} {"enabled" if user.is_enabled else "disabled" }")
+    flash(f"Demo mode user: {user.username} {'abilitata' if user.demo_mode else 'non abilitata' } ", "success")
+    logger(current_user.id, f"User {user.username} {'enabled' if user.is_enabled else 'disabled' }")
     return redirect(url_for('admin_users'))
 
 
