@@ -1,22 +1,29 @@
-import os
-from flask import Flask, Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, login_required, current_user, logout_user, UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
-from forms import RegistrationForm, LoginForm, UpdateWorkoutForm, \
-AddWorkoutForm, AddExerciseForm, UpdateExerciseForm, AddExerciseForm, UpdateProfileForm
-from datetime import datetime
-from werkzeug.utils import secure_filename
-from flask_bootstrap import Bootstrap5
-from utils import get_text_from_image_openai, allowed_file,get_exercise_suggestion, get_exercise, get_month_start_end, get_frasi_motivazionali
-from functools import wraps
+# Importazioni standard della libreria Python
 import click
-from flask.cli import with_appcontext
 import locale
-from datetime import datetime, timedelta, timezone
-from sqlalchemy.exc import SQLAlchemyError
+import os
 import random
 import string
+from datetime import datetime, timedelta, timezone
+from functools import wraps
+
+# Importazioni di librerie esterne
+from flask import Flask, Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask.cli import with_appcontext
+from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+from flask_bootstrap import Bootstrap5
+from sqlalchemy.exc import SQLAlchemyError
+
+# Importazioni del progetto locale
+from forms import (AddExerciseForm, AddWorkoutForm, LoginForm, RegistrationForm, 
+                   UpdateExerciseForm, UpdateProfileForm, UpdateWorkoutForm)
+from utils import (allowed_file, get_exercise, get_exercise_link, get_exercise_suggestion, 
+                   get_frasi_motivazionali, get_frasi_motivazionali_home, 
+                   get_month_start_end, get_text_from_image_openai)
+
 
 
 locale.setlocale(locale.LC_ALL, 'it_IT')      
@@ -24,7 +31,7 @@ locale.setlocale(locale.LC_ALL, 'it_IT')
 # Configurazione Flask App
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workout.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -32,7 +39,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 bootstrap = Bootstrap5(app)
-admin_bp = Blueprint('admin', __name__)
 
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
@@ -141,16 +147,15 @@ def create_superuser(username, email, password):
     existing_superuser = User.query.filter_by(is_superuser=True).first()
     if existing_user or existing_superuser:
         return False
-    hashed_password = generate_password_hash(password)
-    superuser = User(
+    su = User(
         username=username, 
         email=email, 
-        password=hashed_password,
         is_superuser=True,
         is_enabled = True,
         demo_mode = False
     )
-    db.session.add(superuser)
+    su.set_password(password)
+    db.session.add(su)
     db.session.commit()
     return True
 
@@ -204,6 +209,7 @@ def admin_dashboard():
     server_uptime = '3 days 4 hours'  # Example placeholder
     last_backup = datetime.utcnow() - timedelta(days=1)
 
+  
     return render_template(
         'admin_dashboard.html', 
         title='Admin Dashboard',
@@ -265,8 +271,41 @@ def demo_mode_user(id):
     logger(current_user.id, f"User {user.username} {'enabled' if user.is_enabled else 'disabled' }")
     return redirect(url_for('admin_users'))
 
+@app.route('/admin/delete_user/<int:id>', methods=['POST'])
+@login_required
+@superuser_required
+def delete_user(id):
+    """Admin route to delete a user."""
+    user_to_delete = User.query.get_or_404(id)
 
-@app.route('/api/admin/generate_unlock_code/<int:id>', methods=['POST'])
+    # Prevent admin from deleting their own account
+    if user_to_delete.id == current_user.id:
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for('admin_users'))
+
+    try:
+        # Delete the user and commit changes
+        workouts = Workout.query.filter_by(user_id=user_to_delete.id).all()
+        if workouts:
+            for w in workouts:
+                exercises = Exercise.query.filter_by(workout_id=w.id).all()
+                if exercises:
+                    for e in exercises:
+                        db.session.delete(e)
+                db.session.delete(w)
+        db.session.delete(user_to_delete)
+        db.session.commit()
+        flash(f"User {user_to_delete.username} has been successfully deleted.", "success")
+        logger(current_user.id, f"Deleted user {user_to_delete.username}")
+    except Exception as e:
+        # Handle errors and rollback
+        db.session.rollback()
+        flash(f"An error occurred while deleting the user: {str(e)}", "danger")
+
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/generate_unlock_code/<int:id>', methods=['POST'])
 @login_required
 @superuser_required
 def generate_unlock_code(id):
@@ -289,48 +328,88 @@ def generate_unlock_code(id):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
+    
+    # Redirect to dashboard if the user is already logged in
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
     if form.validate_on_submit():
-        hashed_password = generate_password_hash(form.password.data)
-        user = User(
-            username=form.username.data, 
-            email=form.email.data, 
-            password=hashed_password,
-            is_superuser = False,
-            is_enabled = True,
-            demo_mode = True
-            )
-        db.session.add(user)
+        # Check for existing username or email
+        existing_username = User.query.filter_by(username=form.username.data).first()
+        existing_email = User.query.filter_by(email=form.email.data).first()
+
+        if existing_username:
+            flash('Username is already taken. Please choose another one.', 'danger')
+            return redirect(url_for('register'))
+
+        if existing_email:
+            flash('Email is already registered. Please use a different email.', 'danger')
+            return redirect(url_for('register'))
+
+        # Create and save the new user
+        new_user = User(
+            username=form.username.data,
+            email=form.email.data,
+            is_superuser=False,
+            is_enabled=True,
+            demo_mode=True
+        )
+        new_user.set_password(form.password.data)
+        db.session.add(new_user)
         db.session.commit()
-        flash('Registrazione avvenuta con successo!', 'success')
-        logger(user.id,'Registrazione nuovo utente')
+
+        flash('Registration successful! You can now log in.', 'success')
+        logger(new_user.id, 'New user registered')
         return redirect(url_for('login'))
 
+    # Render the registration template with the form
     return render_template('register.html', form=form)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    
+    # Redirect authenticated users to their respective dashboards
+    if current_user.is_authenticated:
+        if current_user.is_superuser:
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('dashboard'))
+
     if form.validate_on_submit():
+        # Fetch the user by username
         user = User.query.filter_by(username=form.username.data).first()
+
+        # Validate user and password
         if user and check_password_hash(user.password, form.password.data):
             login_user(user)
-            # Redirect superusers to admin dashboard
+
+            # Log the successful login
+            logger(user.id, 'Login successful')
+
+            # Redirect based on user role
             if user.is_superuser:
                 return redirect(url_for('admin_dashboard'))
-            logger(user.id,'Login success')
             return redirect(url_for('dashboard'))
 
-        flash('Login non riuscito. Controlla username e password.', 'danger')
-        logger(None, 'Login fallito '+form.username.data)
+        # Handle login failure
+        flash('Login failed. Please check your username and password.', 'danger')
+        if form.username.data:
+            logger(None, f'Login failed for username: {form.username.data}')
+        else:
+            logger(None, 'Login failed for an unspecified username')
+
     return render_template('login.html', form=form)
+
 
 @app.route('/logout')
 @login_required
 def logout():
-    logger(current_user.id,'Logout utente')
-
+    logger(current_user.id, f"User {current_user.username} logged out at {datetime.utcnow()}")
     logout_user()
+    flash('You have been logged out successfully.', 'info')
     return redirect(url_for('login'))
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -385,13 +464,15 @@ def dashboard():
         Workout.date.between(start_date, end_date)
     ).order_by(Workout.date.asc()).all()
     
-    
+    quote_home = get_frasi_motivazionali_home()
     return render_template('dashboard.html', 
                            title=('Workout Log'),
                            workouts=workouts,
                            year=year,
                            month=month,
                            date=start_date,
+                           quote=quote_home,
+                           user=current_user,
                            quotes=get_frasi_motivazionali())
 
 @app.route('/dashboard/date/<int:month>/<int:year>', methods=['GET'])
@@ -403,13 +484,15 @@ def select_workout_date(month, year):
         Workout.date.between(start_date, end_date)
     ).order_by(Workout.date.asc()).all()
 
-
+    quote_home = get_frasi_motivazionali_home()
     return render_template('dashboard.html', 
                            title=('Workout Log'),
                            workouts=workouts,
                            year=year,
                            month=month,
                            date=start_date,
+                           quote=quote_home,
+                           user=current_user,
                            quotes=get_frasi_motivazionali())
 
 @app.route('/workout/upload', methods=['GET', 'POST'])
@@ -499,6 +582,7 @@ def add_workout():
 
     return render_template('add_workout.html',
                            title=('Add Workout'), 
+                           user=current_user,
                            form=form)
 
 @app.route('/exercise/add/<int:id>', methods=['GET', 'POST'])
@@ -660,7 +744,9 @@ def exercise_info(id):
         w = exercise.get_workout()
         logger(current_user.id,'Get advice for exercise '+exercise.name+' workout '+w.date.strftime('%d-%m-%Y'))
         db.session.commit()    
-   
+    
+    video_links = get_exercise_link(exercise.name)
+    
 
     return render_template('exercise_info.html',
                         title=('Adivice'), 
@@ -668,6 +754,7 @@ def exercise_info(id):
                         exercise = exercise,
                         exercises = exercises,
                         history = history,
+                        video_links = video_links,
                         workout = exercise.get_workout())
 
 @app.route('/workout/history', methods=['GET', 'POST'])
@@ -712,6 +799,20 @@ def workout_history():
             exercise_key=key,
             exercises=exercises
         )
+
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

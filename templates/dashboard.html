@@ -1,137 +1,161 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
 
 {% block content %}
 
 <div class="container">
-  <h1>{{title}}</h1>
+  <h1>{{ title }}</h1>
   {% include "month_slider.html" %}
+  
   {% if workouts %}
   <div class="accordion" id="workoutAccordion">
-    <!-- Giorno X -->
     {% for workout in workouts %}
     <div class="accordion-item">
-      <h2 class="accordion-header" id="heading{{loop.index}}">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{loop.index}}" aria-expanded="false" aria-controls="collapse{{loop.index}}">
-          {{workout.date.strftime("%A").title()}} - {{workout.date.strftime("%d %B").title()}} 
-          - {{ workout.type }}
+      <h2 class="accordion-header" id="heading{{ loop.index }}">
+        <button class="accordion-button collapsed" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#collapse{{ loop.index }}" 
+                aria-expanded="false" 
+                aria-controls="collapse{{ loop.index }}">
+          {{ workout.date.strftime("%A").title() }} - 
+          {{ workout.date.strftime("%d %B").title() }} - 
+          {{ workout.type }}
         </button>
-      </h2> 
-      <div id="collapse{{loop.index}}" class="accordion-collapse collapse" aria-labelledby="heading{{loop.index}}" data-bs-parent="#workoutAccordion">
+      </h2>
+      <div id="collapse{{ loop.index }}" 
+           class="accordion-collapse collapse" 
+           aria-labelledby="heading{{ loop.index }}" 
+           data-bs-parent="#workoutAccordion">
         <div class="accordion-body">
           <ul class="exercises list-unstyled">
-            {% if workout.note != "None" and workout.note != None and workout.note != "" %}
+            {% if workout.note %}
               <li class="note">{{ workout.note | capitalize }}</li>
               <hr>
             {% endif %}
             
             {% for exercise in workout.exercise %}
-              <li>
-                <span class="name">
-                  {{exercise.name | capitalize }}  &nbsp;   
-              {% if exercise.weight or exercise.score or exercise.equipment %}
-                  &nbsp;|&nbsp;&nbsp;
+            <li>
+              <span class="name">
+                {{ exercise.name | capitalize }}
+                {% if exercise.weight or exercise.score or exercise.equipment %}
+                  &nbsp;|&nbsp;
                   <small class="text-white-50">
-                  {% if exercise.weight %} {{ exercise.weight }} Kg {% endif %}
-                  {% if exercise.score %} {{ exercise.score }} {% endif %}
-                  {% if exercise.equipment %}   &nbsp;-&nbsp; {{ exercise.equipment }} {% endif %}
-                </small>
-                </span>
-                
-              </li>
-              {% else %}
-                </span>     
-              </li>
-              {% endif %}
-              <li class="text-white-50">
-                {{exercise.repetitions}}&nbsp;
-              </li>
-              {% if exercise.time != None %}<li class="p-0"> <span class="descr">{{exercise.time}}</span></li>{% endif %}
-              {% if workout.note != "None" and workout.note !=None %}
-                <li class="p-0"> <span class="note">{{exercise.note}}</span></li>
-              {% endif %}
-              
-              <div class="btn-group btn-group-sm d-flex justify-content-end" role="group" aria-label="...">
-                <button class="btn-dialog" data-bs-toggle="modal" data-bs-target="#exerciseModal-{{ exercise.id }}">
-                  <i class="bi bi-activity"></i>
+                    {% if exercise.weight %} {{ exercise.weight }} Kg {% endif %}
+                    {% if exercise.score %} {{ exercise.score }} {% endif %}
+                    {% if exercise.equipment %} &nbsp;-&nbsp; {{ exercise.equipment }} {% endif %}
+                  </small>
+                {% endif %}
+              </span>
+            </li>
+            <li class="text-white-50">{{ exercise.repetitions }}</li>
+            {% if exercise.time %}
+              <li class="p-0"><span class="descr">{{ exercise.time }}</span></li>
+            {% endif %}
+            {% if exercise.note %}
+              <li class="p-0"><span class="note">{{ exercise.note }}</span></li>
+            {% endif %}
+
+            <!-- Buttons for actions on exercises -->
+            <div class="btn-group btn-group-sm d-flex justify-content-end" role="group">
+              <button class="btn-dialog" data-bs-toggle="modal" data-bs-target="#exerciseModal-{{ exercise.id }}">
+                <i class="bi bi-activity"></i>
+              </button>
+              <a href="{{ url_for('edit_exercise', id=exercise.id) }}" 
+                 class="btn-edit mx-1">
+                <i class="bi bi-pencil-square"></i>
+              </a>
+              <form action="{{ url_for('delete_exercise', id=exercise.id) }}" method="post" style="display: inline;">
+                <button type="submit" class="btn-delete">
+                  <i class="bi bi-trash"></i>
                 </button>
-                
-                <a href="{{ url_for('edit_exercise', id=exercise.id) }}" role="button" aria-expanded="false" class="btn-edit mx-1">
-                  <i class="bi bi-pencil-square"></i>
-                </a>
-                
-                <form action="{{ url_for('delete_exercise', id=exercise.id) }}" method="post" style="display: inline;">
-                  <button type="submit" class="btn-delete" type="button" aria-expanded="false">
-                      <i class="bi bi-trash"></i>
-                  </button>
-                </form>
-            </div>            
+              </form>
+            </div>
             {% include "dialog_exercise.html" %}
             {% endfor %}
             
-            {% if workout.score or workout.equipment %}<hr>{% endif %}
-            {% if workout.score %}<li>{{workout.score}}</li> {% endif %}
-            {% if workout.equipment %}<li>{{workout.equipment}}</li> {% endif %}
-            
+            {% if not workout.exercise %}
+              <span>Add a new exercise ➕</span>
+            {% endif %}
           </ul>
-          {% if not workout.exercise %} 
-          <span>Clicca su ➕ per aggiungere un nuovo esercizio</span>
-          {% endif %}
-          <hr> 
-          <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
-            <div class="btn-group btn-group-sm" role="group">
-              <!-- Pulsante Modifica -->
-              <a href="{{ url_for('edit_workout', id=workout.id) }}" 
-                 role="button" 
-                 aria-label="Modify Workout" 
-                 class="btn-edit">
-                 <i class="bi bi-pencil-square"></i>
+          
+          <!-- Toolbar for workout actions -->
+          <hr>
+          <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-edit" aria-label="Modify Workout">
+                <i class="bi bi-pencil-square"></i>
               </a>
-              <a href="{{ url_for('add_exercise', id=workout.id) }}" 
-                 role="button" 
-                 aria-label="Add Exercise" 
-                 class="btn-edit mx-1">
-                 <i class="bi bi-plus-lg"></i>
+              <a href="{{ url_for('add_exercise', id=workout.id) }}" class="btn-edit mx-1" aria-label="Add Exercise">
+                <i class="bi bi-plus-lg"></i>
               </a>
-              
-              <!-- Pulsante Elimina -->
               <form action="{{ url_for('delete_workout', id=workout.id) }}" method="post" style="display: inline;">
-                  <button type="submit" 
-                          class="btn-delete" 
-                          aria-label="Elimina Workout" 
-                          type="button">
-                      <i class="bi bi-trash"></i>
-                  </button>
+                <button type="submit" class="btn-delete" aria-label="Delete Workout">
+                  <i class="bi bi-trash"></i>
+                </button>
               </form>
             </div>
           </div>
-          
-          
         </div>
-        
       </div>
     </div>
     {% endfor %}
-
-    
-    <!-- Aggiungi altri giorni qui -->
   </div>
   {% endif %}
   <footer>
-    <p>Continua a spingere al massimo 💪</p>
+    <p>{{ quote }}</p>
   </footer>
 </div>
 
-<!-- Barra in basso per aggiungere workout -->
+{% if user.total_workouts_added % 5 == 0 %}
+<div class="d-flex justify-content-center align-items-center vh-40">
+  <div class="card text-bg-dark border-warning mb-3 text-center" id="donationCard" style="max-width: 50rem;">
+    <div class="card-body">
+      <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="document.getElementById('donationCard').style.display='none';"></button>
+      <p class="card-text mt-4">
+        Complimenti, stai andando alla grande! Hai inserito ben {{ user.total_workouts_added }} allenamenti. Segno che ti stai impegnando davvero! 💪 
+        Ricorda, proprio come nello sport, ogni sforzo viene sempre ripagato. 
+        Se vuoi sbloccare nuove funzionalità e supportare il mio lavoro (perché, diciamocelo, anche i coach devono pur mangiare 🥗), considera di fare una piccola donazione. 
+        Insieme continueremo a raggiungere grandi obiettivi!
+        Indicami la mail nelle note e riceverai il codice per sbloccare l'app per sempre.
+      </p>
+      <a href="https://revolut.me/biscarci" target="_blank" class="btn btn-add-workout glowing-button">
+        Donate Now
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+{% if user.total_workouts_added == 30 %}
+<div class="d-flex justify-content-center align-items-center vh-40">
+<div class="card text-bg-dark border-warning mb-3 text-center" style="max-width: 50rem;">
+  <div class="card-body">
+    <p class="card-text">
+      Sei una vera macchina da guerra! 💥 Hai superato il limite di 30 allenamenti della versione gratuita
+      è evidente che non ti fermi mai! Come nello sport, ogni bestia che si rispetti sa che gli sforzi vanno ripagati. 
+      Aiutami a mettere anche io qualcosa nel piatto (i coach hanno fame di cibo e risultati 🥗)! 
+      Fai una piccola donazione e insieme continueremo a macinare successi!
+      Indicami la mail nelle note e riceverai il codice per sbloccare l'app per sempre
+    </p>
+    <a href="https://revolut.me/biscarci" target="_blank" class="btn btn-add-workout glowing-button">
+      Donate Now
+    </a>
+  </div>
+</div>
+</div>
+{% endif %}
+
+
+
+<!-- Bottom bar for adding new workouts -->
 <div class="bottom-bar">
-  <a class="btn btn-add-workout"
-    style="width: 130px;" 
-    href="{{ url_for('add_workout') }}" 
-    role="button" 
-    aria-expanded="false">
+  <a class="btn btn-add-workout" 
+     style="width: 130px;" 
+     href="{{ url_for('add_workout') }}" 
+     role="button">
     GO!
   </a>
-  
 </div>
 
 {% endblock %}
-

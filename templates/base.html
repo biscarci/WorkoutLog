@@ -182,6 +182,37 @@
             .modal-footer {
               background-color: #333!important;
             }
+            .glowing-button {
+              display: inline-block;
+              padding: 10px 20px;
+              font-size: 16px;
+              font-weight: bold;
+              color: white;
+              background-color: #e6b832; /* Main button color */
+              border: none;
+              border-radius: 5px;
+              text-decoration: none;
+              text-align: center;
+              transition: all 0.3s ease;
+              animation: glow 1.5s infinite; /* Infinite animation loop */
+            }
+
+            .glowing-button:hover {
+              background-color: #d4a62f; /* Slightly darker shade on hover */
+              transform: scale(1.1); /* Enlarge on hover */
+            }
+
+            @keyframes glow {
+              0% {
+                box-shadow: 0 0 10px #e6b832, 0 0 20px #e6b832, 0 0 30px #e6b832;
+              }
+              50% {
+                box-shadow: 0 0 20px #d4a62f, 0 0 30px #d4a62f, 0 0 40px #d4a62f;
+              }
+              100% {
+                box-shadow: 0 0 10px #e6b832, 0 0 20px #e6b832, 0 0 30px #e6b832;
+              }
+            }
         </style>
       {% endblock %}
     {% endblock %}

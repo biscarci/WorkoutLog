@@ -34,6 +34,35 @@
     </p>
     <hr>
     {% include "rm_calculator.html" %}
+    <div class="accordion" id="accordionExample">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+              Video Esercizio
+            </button>
+          </h2>
+          <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+                <div class="row">
+                    {% for v in video_links %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-bg-dark">
+                            <img src="https://img.youtube.com/vi_webp/{{v.link}}/default.webp" class="card-img-top" alt="{{ v.exercise }}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ v.exercise }}</h5>
+                                <a href="https://www.youtube.com/watch?v={{v.link}}" target="_blank" class="btn btn-add-workout">Guarda Video</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        </div>
+      </div>
+
+
 
 </div>
 
