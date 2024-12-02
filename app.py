@@ -6,6 +6,8 @@ import random
 import string
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+import hmac
+import hashlib
 
 # Importazioni di librerie esterne
 from flask import Flask, Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
@@ -26,6 +28,9 @@ from utils import (allowed_file, get_exercise, get_exercise_link, get_exercise_s
 
 
 
+app = Flask(__name__)
+
+
 locale.setlocale(locale.LC_ALL, 'it_IT')      
 
 # Configurazione Flask App
@@ -34,6 +39,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workout.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['GITHUB_WEBHOOK_SECRET'] = 'ab443a73a819880c1a84923f26fcb97281246b4afddc669356f08bd22cd0d1b8'
+
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -813,6 +820,60 @@ def internal_error(error):
 
 
 
+def verify_signature(payload, signature):
+    """Verify the webhook signature from GitHub."""
+    if not signature:
+        return False
+
+    secret = bytes(app.config['GITHUB_WEBHOOK_SECRET'] , 'utf-8')
+    hash_object = hmac.new(secret, payload, hashlib.sha256)
+    expected_signature = f"sha256={hash_object.hexdigest()}"
+
+    return hmac.compare_digest(expected_signature, signature)
+
+def handle_push_event(payload):
+    """Handle push events."""
+    repo_name = payload['repository']['name']
+    pusher = payload['pusher']['name']
+    commits = payload['commits']
+
+    logger( None, f"Push event received for {repo_name} by {pusher}")
+    for commit in commits:
+        logger( None, f"Commit message: {commit['message']} by {commit['author']['name']}")
+
+    return jsonify({"message": "Push event handled"}), 200
+
+def handle_pull_request_event(payload):
+    """Handle pull request events."""
+    action = payload['action']
+    pr_title = payload['pull_request']['title']
+    pr_user = payload['pull_request']['user']['login']
+
+    logger( None,f"Pull request {action}: {pr_title} by {pr_user}")
+
+    return jsonify({"message": "Pull request event handled"}), 200
+
+
+@app.route('/github-webhook', methods=['POST'])
+def github_webhook():
+    # Verify the GitHub signature
+    signature = request.headers.get('X-Hub-Signature-256')
+    if not verify_signature(request.data, signature):
+        abort(403)  # Forbidden
+
+    # Parse the payload
+    event = request.headers.get('X-GitHub-Event')
+    payload = request.json
+
+    # Handle different events
+    if event == "push":
+        return handle_push_event(payload)
+    elif event == "pull_request":
+        return handle_pull_request_event(payload)
+    else:
+        return jsonify({"message": f"Unhandled event: {event}"}), 200
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
+
