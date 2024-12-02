@@ -539,6 +539,8 @@ def upload_workout():
             except:
                 wod_date = datetime.now()
             # Processamento e salvataggio degli esercizi estratti
+            # Crea un oggetto Workout
+            
             for w in wod.workouts:
                 workout = Workout(
                     date = wod_date,
@@ -549,10 +551,12 @@ def upload_workout():
                 db.session.add(workout)
                 db.session.commit()
                 for e in w.exercises:
+                    exercise_note = e.note if e.note != "None" else None
+                    exercise_repetitions = e.description if e.description != "None" else None
                     exercise = Exercise(
                         name = e.name,
-                        repetitions = e.description,
-                        note = e.note,
+                        repetitions = exercise_repetitions,
+                        note = exercise_note,
                         workout_id = workout.id
                     )
                     db.session.add(exercise)

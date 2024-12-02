@@ -48,7 +48,6 @@ def get_month_start_end(month_number, year):
         end_date = datetime(year + 1, 1, 1) - timedelta(days=1)  # Last day of December
     else:
         end_date = datetime(year, month_number + 1, 1) - timedelta(days=1)  # Last day of the month
-    print(start_date, end_date)
     return start_date, end_date
  
 def get_text_from_image_openai(image_path):
@@ -78,13 +77,12 @@ def get_text_from_image_openai(image_path):
         response_format=WorkoutOfDay,
     )
     workoutofday = completion.choices[0].message.parsed
-    
-    for w in workoutofday.workouts:
+    """ for w in workoutofday.workouts:
         print(workoutofday.date)
         print(w.name)
         for ex in w.exercises:
             print(ex.name)
-            print(ex.description)
+            print(ex.description) """
     
     return workoutofday
 
