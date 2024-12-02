@@ -106,7 +106,7 @@
   </footer>
 </div>
 
-{% if user.total_workouts_added % 5 == 0 %}
+{% if user.total_workouts_added % 5 == 0 and user.total_workouts_added != 0 %}
 <div class="d-flex justify-content-center align-items-center vh-40">
   <div class="card text-bg-dark border-warning mb-3 text-center" id="donationCard" style="max-width: 50rem;">
     <div class="card-body">

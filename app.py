@@ -524,6 +524,9 @@ def upload_workout():
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
+            upload_folder_path =os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'])
+            if not os.path.exists(upload_folder_path):
+                os.makedirs(upload_folder_path)
             filename = secure_filename(file.filename)
             filepath = os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
