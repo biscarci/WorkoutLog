@@ -135,6 +135,7 @@ def superuser_required(f):
 def create_tables():
     db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     # Controlla se il file esiste
+    db_path = os.path.join(os.path.abspath('.'), db_path)
     if not os.path.exists(db_path):
         db.create_all()
    
@@ -811,68 +812,13 @@ def workout_history():
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return render_template('404.html'), 404
+    return render_template('404.html', error=error), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    return render_template('500.html'), 500
+    return render_template('500.html', error=error), 500
 
-
-
-def verify_signature(payload, signature):
-    """Verify the webhook signature from GitHub."""
-    if not signature:
-        return False
-
-    secret = bytes(app.config['GITHUB_WEBHOOK_SECRET'] , 'utf-8')
-    hash_object = hmac.new(secret, payload, hashlib.sha256)
-    expected_signature = f"sha256={hash_object.hexdigest()}"
-
-    return hmac.compare_digest(expected_signature, signature)
-
-def handle_push_event(payload):
-    """Handle push events."""
-    repo_name = payload['repository']['name']
-    pusher = payload['pusher']['name']
-    commits = payload['commits']
-
-    logger( None, f"Push event received for {repo_name} by {pusher}")
-    for commit in commits:
-        logger( None, f"Commit message: {commit['message']} by {commit['author']['name']}")
-
-    return jsonify({"message": "Push event handled"}), 200
-
-def handle_pull_request_event(payload):
-    """Handle pull request events."""
-    action = payload['action']
-    pr_title = payload['pull_request']['title']
-    pr_user = payload['pull_request']['user']['login']
-
-    logger( None,f"Pull request {action}: {pr_title} by {pr_user}")
-
-    return jsonify({"message": "Pull request event handled"}), 200
-
-
-@app.route('/github-webhook', methods=['POST'])
-def github_webhook():
-    # Verify the GitHub signature
-    signature = request.headers.get('X-Hub-Signature-256')
-    if not verify_signature(request.data, signature):
-        abort(403)  # Forbidden
-
-    # Parse the payload
-    event = request.headers.get('X-GitHub-Event')
-    payload = request.json
-
-    # Handle different events
-    if event == "push":
-        return handle_push_event(payload)
-    elif event == "pull_request":
-        return handle_pull_request_event(payload)
-    else:
-        return jsonify({"message": f"Unhandled event: {event}"}), 200
-    
 
 if __name__ == '__main__':
     app.run(debug=True)
