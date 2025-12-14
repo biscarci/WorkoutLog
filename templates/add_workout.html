@@ -11,9 +11,8 @@
             <form method="POST" action="{{ url_for('add_workout') }}">
                 {{ form.csrf_token() }}
                 {{ render_field(form.date, class_="form-control") }}
-                {{ render_field(form.type, class_="form-control") }}
-                {{ render_field(form.duration, class_="form-control") }}
-                {{ render_field(form.note, class_="form-control") }}
+                {{ render_field(form.name, class_="form-control") }}
+                {{ render_field(form.description, class_="form-control") }}
                 
                  <!-- Pulsante Add Workout centrale -->
                  <div class="d-flex justify-content-center mt-4">
@@ -35,13 +34,6 @@
     </div>
     <div class="row justify-content-center mb-3">
         <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('workout_history') }}" role="button" aria-expanded="false">
-                <i class="bi bi-clock-history"></i> History
-            </a>
-        </div>
-    </div>
-    <div class="row justify-content-center mb-3">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
             <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('profile') }}" role="button" aria-expanded="false">
                 <i class="bi bi-person"></i> Profile
             </a>
@@ -58,7 +50,7 @@
     {% endif %}
     <div class="row justify-content-center mb-3">
         <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-back btn-block w-100" href="{{ url_for('logout') }}" role="button" aria-expanded="false">
+            <a class="btn btn-outline-primary btn-block w-100" href="{{ url_for('logout') }}" role="button" aria-expanded="false">
                 <i class="bi bi-box-arrow-left"></i> Logout
             </a>
         </div>
@@ -70,7 +62,7 @@
   
 <!-- Barra in basso per aggiungere workout -->
 <div class="bottom-bar">
-    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
 </div>
 {% endblock %}
          

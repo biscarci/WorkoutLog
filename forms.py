@@ -1,6 +1,6 @@
 # forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, FileField, FloatField, SubmitField, DateField, SelectField, IntegerField
+from wtforms import StringField, PasswordField, FileField, FloatField, SubmitField, DateField, SelectField, IntegerField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Optional, Email
 from flask_wtf.file import FileAllowed
 from datetime import datetime
@@ -30,9 +30,8 @@ class UploadForm(FlaskForm):
 # Form per Workout
 class WorkoutForm(FlaskForm):
     date       = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
-    type       = StringField(('Type'), validators=[Optional()])
-    duration   = StringField(('Duration'), validators=[Optional()])
-    note       = StringField(('Note'), validators=[Optional()])
+    name       = StringField(('Name'), validators=[DataRequired(), Length(min=2, max=150)])
+    description= TextAreaField(('Description'), validators=[Optional()])
    
 # Form per l'aggiornamento dell'esercizio
 class UpdateWorkoutForm(WorkoutForm):
@@ -43,25 +42,18 @@ class UpdateWorkoutForm(WorkoutForm):
 class AddWorkoutForm(WorkoutForm):
     submit     = SubmitField('Add')
 
-class ExerciseForm(FlaskForm):
-    choicesOptions =['', 'Barbell', 'Bumbell', 'Kettlebell', 'Sandbag', 'Row', 'Skyerg', 'Bike']
+class PerformanceForm(FlaskForm):
+    date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
+    description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
+    workout_id = SelectField('Workout', coerce=int, validators=[Optional()])
+    submit = SubmitField('Add Performance')
 
-    name = StringField(('Name'), validators=[Optional()])
-    repetitions = StringField(('Repetitions'), default=None, validators=[Optional()])
-    note = StringField(('Note'), validators=[Optional()])
-    weight     = FloatField(('Weight'), default=0, validators=[Optional()])
-    equipment  = SelectField(('Equipment'), choices=choicesOptions, validators=[Optional()])
-    score      = StringField(('Score'), validators=[Optional()])
-
-
-# Form per l'aggiornamento dell'esercizio
-class UpdateExerciseForm(ExerciseForm):
-    submit     = SubmitField('Update')
-
-
-# Form per l'aggiornamento dell'esercizio
-class AddExerciseForm(ExerciseForm):
-    submit     = SubmitField('Add')
+class UserStatisticForm(FlaskForm):
+    date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
+    exercise = StringField('Exercise', validators=[DataRequired(), Length(min=2, max=150)])
+    weight = FloatField('Weight (Kg)', validators=[Optional()])
+    reps = IntegerField('Reps', validators=[Optional()])
+    submit = SubmitField('Save Stats')
 
 
 class UpdateProfileForm(FlaskForm):
@@ -72,4 +64,3 @@ class UpdateProfileForm(FlaskForm):
     unlock_code = StringField('Unlock Profile', validators=[Optional()])
 
     submit = SubmitField('Aggiorna Profilo')
-

@@ -20,9 +20,9 @@ from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 
 # Importazioni del progetto locale
-from forms import (AddExerciseForm, AddWorkoutForm, LoginForm, RegistrationForm, 
-                   UpdateExerciseForm, UpdateProfileForm, UpdateWorkoutForm)
-from utils import (allowed_file, get_exercise, get_exercise_link, get_exercise_suggestion, 
+from forms import (AddWorkoutForm, LoginForm, RegistrationForm, 
+                   PerformanceForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
+from utils import (allowed_file, 
                    get_frasi_motivazionali, get_frasi_motivazionali_home, 
                    get_month_start_end, get_text_from_image_openai)
 
@@ -76,30 +76,28 @@ class User(UserMixin, db.Model):
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=True)
-    type = db.Column(db.String(50), nullable=False)  
-    duration = db.Column(db.String(50), nullable=True)
-    note = db.Column(db.String(150), nullable=True)
+    name = db.Column(db.String(50), nullable=False)  
+    description = db.Column(db.String(150), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    exercise = db.relationship('Exercise', backref='workout', lazy=True)
 
-class Exercise(db.Model):
+class Performance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=True)
-    weight_percentage = db.Column(db.Integer, nullable=True)
-    rpe = db.Column(db.Integer, nullable=True)
-    repetitions = db.Column(db.String(20), nullable=True)
-    time = db.Column(db.String(20), nullable=True)
-    note = db.Column(db.String(150), nullable=True)
-    weight = db.Column(db.Float, nullable=True)
-    score = db.Column(db.String(50), nullable=True)
-    advice = db.Column(db.String(2000), nullable=True)
-    equipment = db.Column(db.String(50), nullable=True)
-    date = db.Column(db.DateTime, default=datetime.now)
-    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
+    date = db.Column(db.DateTime, nullable=True)
+    description = db.Column(db.String(150), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    def get_workout(self):
-        w = Workout.query.get_or_404(self.workout_id)
-        return w
+class WorkoutPerformance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
+    performance_id = db.Column(db.Integer, db.ForeignKey('performance.id'), nullable=False)
+
+class UserStatistic(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, nullable=True)
+    exercise = db.Column(db.String(150), nullable=True)
+    weight = db.Column(db.Float, nullable=True)
+    reps = db.Column(db.Integer, nullable=True)
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -167,6 +165,7 @@ def create_superuser(username, email, password):
     db.session.commit()
     return True
 
+
 @click.command('create-superuser')
 @click.option('--username', prompt=True)
 @click.option('--email', prompt=True)
@@ -201,11 +200,11 @@ def admin_dashboard():
         Workout.date > datetime.utcnow() - timedelta(days=30)
     ).count()
     
-    # Most active workout type
+    # Most active workout name
     most_active_workout_type = db.session.query(
-        Workout.type, 
+        Workout.name, 
         db.func.count(Workout.id).label('type_count')
-    ).group_by(Workout.type).order_by(
+    ).group_by(Workout.name).order_by(
         db.text('type_count DESC')
     ).first()[0] if total_workouts > 0 else 'N/A'
 
@@ -296,10 +295,6 @@ def delete_user(id):
         workouts = Workout.query.filter_by(user_id=user_to_delete.id).all()
         if workouts:
             for w in workouts:
-                exercises = Exercise.query.filter_by(workout_id=w.id).all()
-                if exercises:
-                    for e in exercises:
-                        db.session.delete(e)
                 db.session.delete(w)
         db.session.delete(user_to_delete)
         db.session.commit()
@@ -466,65 +461,104 @@ def dashboard():
     # Riceve i dati dal client
     year = request.args.get('year', default=datetime.now().year, type=int)
     month = request.args.get('month', default=datetime.now().month, type=int)
+    day = request.args.get('day', default=datetime.now().day, type=int)
         
-    start_date, end_date = get_month_start_end(month, year)
-    workouts = Workout.query.filter_by(user_id=current_user.id).filter(
-        Workout.date.between(start_date, end_date)
+    try:
+        start_date = datetime(year, month, day)
+    except ValueError:
+        start_date = datetime(year, month, 1)
+    end_date = start_date + timedelta(days=1)
+
+    owner = current_user
+    workouts = Workout.query.filter_by(user_id=owner.id).filter(
+        Workout.date >= start_date, Workout.date < end_date
     ).order_by(Workout.date.asc()).all()
+
+    start_day_week = start_date - timedelta(days=start_date.weekday())
     
+    prev_day = start_day_week - timedelta(days=7)
+    next_day = start_day_week + timedelta(days=7)
+    
+    weekdays = [
+        start_day_week + timedelta(days=i)
+        for i in range(7)
+    ]
+
     quote_home = get_frasi_motivazionali_home()
+
     return render_template('dashboard.html', 
-                           title=('Workout Log'),
+                           title=('LIFT OFF'),
                            workouts=workouts,
                            year=year,
                            month=month,
+                           day=start_date.day,
                            date=start_date,
+                           prev_day=prev_day,
+                           next_day=next_day,
+                           weekdays=weekdays,
                            quote=quote_home,
                            user=current_user,
                            quotes=get_frasi_motivazionali())
 
-@app.route('/dashboard/date/<int:month>/<int:year>', methods=['GET'])
+@app.route('/dashboard/date/<int:day>/<int:month>/<int:year>', methods=['GET'])
 @login_required
-def select_workout_date(month, year):
-    # Riceve i dati dal client
-    start_date, end_date = get_month_start_end(month, year)
-    workouts = Workout.query.filter_by(user_id=current_user.id).filter(
-        Workout.date.between(start_date, end_date)
+def select_workout_date(day, month, year):
+    try:
+        start_date = datetime(year, month, day)
+    except ValueError:
+        start_date = datetime(year, month, 1)
+    end_date = start_date + timedelta(days=1)
+
+    owner = current_user
+    workouts = Workout.query.filter_by(user_id=owner.id).filter(
+        Workout.date >= start_date, Workout.date < end_date
     ).order_by(Workout.date.asc()).all()
 
+    start_day_week = start_date - timedelta(days=start_date.weekday())
+
+    prev_day = start_day_week - timedelta(days=7)
+    next_day = start_day_week + timedelta(days=7)
+        
+    weekdays = [
+        start_day_week + timedelta(days=i)
+        for i in range(7)
+    ]
+
     quote_home = get_frasi_motivazionali_home()
+
     return render_template('dashboard.html', 
-                           title=('Workout Log'),
+                           title=('LIFT OFF'),
                            workouts=workouts,
                            year=year,
                            month=month,
+                           day=start_date.day,
                            date=start_date,
+                           prev_day=prev_day,
+                           next_day=next_day,
+                           weekdays=weekdays,
                            quote=quote_home,
                            user=current_user,
                            quotes=get_frasi_motivazionali())
+
 
 @app.route('/workout/upload', methods=['GET', 'POST'])
 @login_required
 def upload_workout():
-    if not current_user.is_enabled:
-        flash('User not enabled', 'success')
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST' and current_user.is_enabled:
+    if request.method == 'POST':
         current_user.total_workouts_added += 1
         db.session.commit()
-        # check if the post request has the file part
+
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
+
         file = request.files['file']
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
+
         if file and allowed_file(file.filename):
-            upload_folder_path =os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'])
+            upload_folder_path = os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'])
             if not os.path.exists(upload_folder_path):
                 os.makedirs(upload_folder_path)
             filename = secure_filename(file.filename)
@@ -532,290 +566,145 @@ def upload_workout():
             file.save(filepath)
             wod = get_text_from_image_openai(filepath)
             os.remove(filepath)
-    
+        else:
+            wod = None
+
         if wod:
             try:
                 wod_date = datetime.strptime(wod.date, "%d-%m-%Y")
-            except:
+            except Exception:
                 wod_date = datetime.now()
-            # Processamento e salvataggio degli esercizi estratti
-            # Crea un oggetto Workout
-            
+
             for w in wod.workouts:
                 workout = Workout(
-                    date = wod_date,
-                    type = w.type,
-                    duration = w.duration,
-                    user_id = current_user.id
+                    date=wod_date,
+                    name=getattr(w, 'name', None) or getattr(w, 'type', 'Workout'),
+                    description=getattr(w, 'description', None),
+                    user_id=current_user.id
                 )
                 db.session.add(workout)
-                db.session.commit()
-                for e in w.exercises:
-                    exercise_note = e.note if e.note != "None" else None
-                    exercise_repetitions = e.description if e.description != "None" else None
-                    exercise = Exercise(
-                        name = e.name,
-                        repetitions = exercise_repetitions,
-                        note = exercise_note,
-                        workout_id = workout.id
-                    )
-                    db.session.add(exercise)
-                    db.session.commit()
-            flash('Esercizi caricati e salvati con successo!')
-            logger(current_user.id,'Load screenshot workout')
+            db.session.commit()
+            flash('Workout creato dal file con successo!', 'success')
+            logger(current_user.id, 'Load screenshot workout')
         else:
-            print('Qualcosa è andato storto')
+            flash('Qualcosa ? andato storto durante il caricamento.', 'danger')
+
         return redirect(url_for('dashboard'))
-           
+
     return render_template('upload.html', title=('Upload Workout'))
+
 
 @app.route('/workout/add', methods=['GET', 'POST'])
 @login_required
 def add_workout():
     form = AddWorkoutForm()
-    
-    if not current_user.is_enabled and request.method == 'POST':
-        flash('User not enabled', 'success')
-        return redirect(url_for('dashboard'))
-    
-    if form.validate_on_submit() and current_user.is_enabled:
+
+    if form.validate_on_submit():
         w = Workout(
-                    date = form.date.data,
-                    type = form.type.data,
-                    duration = form.duration.data,
-                    note = form.note.data,
-                    user_id = current_user.id
-                )
+            date=form.date.data,
+            name=form.name.data,
+            description=form.description.data,
+            user_id=current_user.id
+        )
         current_user.total_workouts_added += 1
         db.session.add(w)
         db.session.commit()
         flash('Workout inserito con successo!', 'success')
-        logger(current_user.id,'New workout created')
+        logger(current_user.id, 'New workout created')
         return redirect(url_for('dashboard'))
-    
-    
 
     return render_template('add_workout.html',
-                           title=('Add Workout'), 
+                           title=('Add Workout'),
                            user=current_user,
                            form=form)
 
-@app.route('/exercise/add/<int:id>', methods=['GET', 'POST'])
-@login_required
-def add_exercise(id):
-    w = Workout.query.get_or_404(id)
-    form = AddExerciseForm()
-    if form.validate_on_submit():
-        e = Exercise(
-            name = form.name.data,
-            repetitions = form.repetitions.data,
-            note = form.note.data,
-            weight = form.weight.data,
-            score = form.score.data,
-            equipment = form.equipment.data,
-            workout_id = w.id
-                )
-        db.session.add(e)
-        db.session.commit()
-        flash('Esercizio inserito con successo!', 'success')
-        logger(current_user.id,'New exercise added to workout'+w.date.strftime('%d-%m-%Y'))
-        return redirect(url_for('dashboard'))
-    
-
-    return render_template('add_exercise.html',
-                           title=('Add Workout'), 
-                           form=form,
-                           workout=w)
-
-@app.route('/workout/menu', methods=['GET', 'POST'])
-@login_required
-def add_workout_menu():                           
-    return render_template('add_workout_menu.html', title=('Menu'))
 
 @app.route('/workout/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_workout(id):
-    # Trova l'allenamento da eliminare basato sull'id
     workout = Workout.query.get_or_404(id)
-    
-    # Verifica che l'allenamento appartenga all'utente corrente
-    if workout.user_id != current_user.id:
-        flash('Non sei autorizzato a eliminare questo allenamento.', 'danger')
-        return redirect(url_for('dashboard'))
+    if workout.user_id != current_user.id and not current_user.is_superuser:
+        abort(403)
+    db.session.delete(workout)
+    db.session.commit()
+    flash('Allenamento eliminato con successo.', 'success')
+    logger(current_user.id, 'Deleted workout '+workout.date.strftime('%d-%m-%Y'))
+    return redirect(url_for('dashboard'))
 
-    # Se il metodo è POST, conferma l'eliminazione
-    if request.method == 'POST':
-        # Rimuovi tutti gli esercizi correlati al workout
-        exercises = Exercise.query.filter_by(workout_id=workout.id).all()
-        if exercises:
-            for e in exercises:
-                db.session.delete(e)
-        db.session.commit()
-        # Rimuovi l'allenamento dal database
-        db.session.delete(workout)
-        db.session.commit()
-        flash('Allenamento eliminato con successo.', 'success')
-        logger(current_user.id,'Deleted workout '+workout.date.strftime('%d-%m-%Y'))
-        return redirect(url_for('dashboard'))
 
 @app.route('/workout/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_workout(id):
     w = Workout.query.get_or_404(id)
+    if w.user_id != current_user.id and not current_user.is_superuser:
+        abort(403)
     form = UpdateWorkoutForm()
     if form.validate_on_submit():
-        w.date = form.date.data     
-        w.type = form.type.data     
-        w.duration = form.duration.data 
+        w.date = form.date.data
+        w.name = form.name.data
+        w.description = form.description.data
         db.session.commit()
         flash('Workout aggiornato con successo!', 'success')
-        logger(current_user.id,'Modified workout '+w.date.strftime('%d-%m-%Y'))
-
+        logger(current_user.id, 'Modified workout '+w.date.strftime('%d-%m-%Y'))
         return redirect(url_for('dashboard'))
     elif request.method == 'GET':
         form.date.data = w.date
-        form.type.data = w.type
-        form.duration.data = w.duration
+        form.name.data = w.name
+        form.description.data = w.description
 
     return render_template('edit_workout.html',
-                           title=('Edit Workout'), 
-                           form=form, 
+                           title=('Edit Workout'),
+                           form=form,
                            workout=w)
 
-@app.route('/exercise/edit/<int:id>', methods=['GET', 'POST'])
+
+@app.route('/performance/add', methods=['GET', 'POST'])
 @login_required
-def edit_exercise(id):
-    e = Exercise.query.get_or_404(id)
-    w = e.get_workout()
-    form = UpdateExerciseForm()
-    if form.validate_on_submit():        
-        e.name = form.name.data     
-        e.repetitions = form.repetitions.data     
-        e.note = form.note.data 
-        e.weight = form.weight.data
-        e.equipment = form.equipment.data
-        e.score = form.score.data
-        db.session.commit()
-        logger(current_user.id,'Modified exercise '+e.name+' workout '+w.date.strftime('%d-%m-%Y'))
-        flash('Esercizio aggiornato con successo!', 'success')
-        return redirect(url_for('dashboard'))
-    elif request.method == 'GET':
-        form.name.data = e.name
-        form.repetitions.data = e.repetitions
-        form.note.data = e.note
-        form.weight.data = e.weight
-        form.equipment.data = e.equipment 
-        form.score.data = e.score
-    return render_template('edit_exercise.html',
-                           title=('Edit Exercise'), 
-                           form=form, 
-                           exercise = e,
-                           workout=w)
+def add_performance():
+    form = PerformanceForm()
+    # popola la select con i workout dell'utente
+    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
+    form.workout_id.choices = [(0, 'Nessun workout collegato')] + [(w.id, f"{w.date.strftime('%d/%m/%Y')} - {w.name}") for w in workouts]
 
-@app.route('/exercise/delete/<int:id>', methods=['POST'])
-@login_required
-def delete_exercise(id):
-    # Trova l'allenamento da eliminare basato sull'id
-    e = Exercise.query.get_or_404(id)
-    w = e.get_workout()
-    # Verifica che l'allenamento appartenga all'utente corrente
-    if e.get_workout().user_id != current_user.id:
-        flash('Non sei autorizzato a eliminare questo esercizio.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    # Se il metodo è POST, conferma l'eliminazione
-    if request.method == 'POST':
-        # Rimuovi l'allenamento dal database
-        db.session.delete(e)
-        db.session.commit()
-        flash('Esercizio eliminato con successo.', 'success')
-        logger(current_user.id,'Deleted exercise '+e.name+' workout '+w.date.strftime('%d-%m-%Y'))
-
-        return redirect(url_for('dashboard'))
-
-@app.route('/exercise/info/<int:id>', methods=['GET'])
-@login_required
-def exercise_info(id): 
-    exercise = Exercise.query.get_or_404(id)
-    
-    exercises = Exercise.query.filter(
-                Exercise.name.ilike(f'%{exercise.name}%'),
-                Exercise.weight != None,
-                Exercise.score !=None  
-            ).order_by(Exercise.date.desc()).all()
-    
-    history = ''
-    for e in exercises:
-        if  e.weight != None:
-            history += e.get_workout().date.strftime("%m/%d/%Y") + ' ' + \
-                e.name + ' ' + e.repetitions + ' executed with ' + str(e.weight) + 'Kg' + ' ' + \
-                e.score
-        else:
-            history += e.name + ' ' + e.repetitions
-        history += '\n'
-
-    if exercise.advice == None:
-        exercise.advice = get_exercise_suggestion(exercise.name, history)
-        w = exercise.get_workout()
-        logger(current_user.id,'Get advice for exercise '+exercise.name+' workout '+w.date.strftime('%d-%m-%Y'))
-        db.session.commit()    
-    
-    video_links = get_exercise_link(exercise.name)
-    
-
-    return render_template('exercise_info.html',
-                        title=('Adivice'), 
-                        advice = exercise.advice,
-                        exercise = exercise,
-                        exercises = exercises,
-                        history = history,
-                        video_links = video_links,
-                        workout = exercise.get_workout())
-
-@app.route('/workout/history', methods=['GET', 'POST'])
-@login_required
-def workout_history():
-    if request.method == 'GET':
-        # Mostra la pagina iniziale senza risultati filtrati
-        return render_template(
-            'history.html',
-            title='Workout History',
-            exercises=None
+    if form.validate_on_submit():
+        perf = Performance(
+            date=form.date.data,
+            description=form.description.data,
+            user_id=current_user.id
         )
+        db.session.add(perf)
+        db.session.flush()
+        if form.workout_id.data and form.workout_id.data != 0:
+            link = WorkoutPerformance(workout_id=form.workout_id.data, performance_id=perf.id)
+            db.session.add(link)
+        db.session.commit()
+        flash('Performance salvata con successo', 'success')
+        logger(current_user.id, 'New performance added')
+        return redirect(url_for('dashboard'))
 
-    elif request.method == 'POST':
-        # Recupera il parametro di ricerca
-        key = request.form.get('exercise_key', '').strip()
-        
-        # Se il campo di ricerca è vuoto, mostra un messaggio di errore
-        if not key:
-            flash('Please enter a valid search term.', 'warning')
-            return redirect(url_for('workout_history'))
-        
-        try:
-            # Filtra gli esercizi basandoti sul nome (case-insensitive) e ordina per data decrescente
-            exercises = Exercise.query.filter(
-                Exercise.name.ilike(f'%{key}%')  # `ilike` è cross-DB compatibile per ricerche case-insensitive
-            ).order_by(Exercise.date.desc()).all()
-            
-            # Verifica se ci sono risultati
-            if not exercises:
-                flash(f'No exercises found for "{key}".', 'info')
-        
-        except SQLAlchemyError as e:
-            # Gestione errori database
-            flash('An error occurred while searching. Please try again later.', 'danger')
-            exercises = None
-        
-        # Renderizza la pagina con i risultati
-        return render_template(
-            'history.html',
-            title='Workout History',
-            exercise_key=key,
-            exercises=exercises
+    return render_template('add_performance.html', title='Add Performance', form=form)
+
+
+@app.route('/stats', methods=['GET', 'POST'])
+@login_required
+def user_stats():
+    form = UserStatisticForm()
+    if form.validate_on_submit():
+        stat = UserStatistic(
+            user_id=current_user.id,
+            date=form.date.data,
+            exercise=form.exercise.data,
+            weight=form.weight.data,
+            reps=form.reps.data
         )
+        db.session.add(stat)
+        db.session.commit()
+        flash('Statistiche salvate', 'success')
+        logger(current_user.id, 'User stats added')
+        return redirect(url_for('user_stats'))
 
-
+    stats = UserStatistic.query.filter_by(user_id=current_user.id).order_by(UserStatistic.date.desc()).all()
+    return render_template('stats.html', title='Statistiche', form=form, stats=stats)
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -829,4 +718,3 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=True)
-

@@ -1,0 +1,28 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<div class="container">   
+    <div class="row">
+        <h1 class="text-center w-100 mb-4">Add Performance</h1>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <form method="POST" action="{{ url_for('add_performance') }}">
+                {{ form.csrf_token() }}
+                {{ render_field(form.date, class_="form-control") }}
+                {{ render_field(form.description, class_="form-control") }}
+                {{ render_field(form.workout_id, class_="form-select") }}
+                
+                 <div class="d-flex justify-content-center mt-4">
+                    {{ render_field(form.submit, class_="btn-add-workout") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}

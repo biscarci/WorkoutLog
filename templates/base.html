@@ -15,203 +15,294 @@
             
             body {
               font-family: 'Arial', sans-serif;
-              background-color: #121212;
-              color: #f5f5f5;
+              background-color: #000;
+              color: #fff;
+              line-height: 1.6;
             }
-            .container {
-              max-width: 800px;
-              margin: 40px auto;
-              background-color: #1e1e1e;
-              padding: 20px;
-              border-radius: 10px;
-              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-            }
-            h1 {
-              text-align: center;
-              font-size: 3rem;
-              font-family: 'Raleway', sans-serif;
-              background: linear-gradient(90deg, #e63946, #ffcc33);
-              -webkit-background-clip: text;
-              color: transparent;
-              margin-bottom: 30px;
-            }
-            .accordion-button {
-              background-color: #2a2a2a;
-              color: #f5f5f5;
-              border: none;
-            }
-            .accordion-button:not(.collapsed) {
-              background-color: #fdbe00;
-              color: #000000;
-              font-weight: bold;
-            }
-            .accordion-body {
-              background-color: #333;
+
+            a, a:hover {
               color: #fff;
             }
+
+            .container {
+              max-width: 900px;
+              margin: 40px auto;
+              background-color: #000;
+              padding: 24px;
+              border: 1px solid #fff;
+              border-radius: 12px;
+            }
+
+            h1 {
+              text-align: center;
+              font-size: 2.4rem;
+              font-family: 'Raleway', sans-serif;
+              color: #fff;
+              margin-bottom: 28px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+            }
+
+            .accordion-button {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+              box-shadow: none;
+            }
+
+            .accordion-button:not(.collapsed) {
+              background-color: #000;
+              color: #fff;
+              font-weight: 700;
+            }
+
+            .accordion-body {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+              border-top: none;
+            }
+
             .exercises li {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              padding: 8px 0;
+              padding: 6px 0;
             }
+
             .exercises li span {
               margin-right: 2px;
             }
-            .exercises .name{
-              font-size: clamp(0.8rem, 1.5ch + 0.5vw, 1.2rem);
-            }
-            .exercises .exercise_title{
-              font-size: clamp(0.8rem, 1.5ch + 0.5vw, 1.2rem);
-              color: #f5f5f5;
-            }
-            .exercises .descr{
-              font-size: medium;
-              color: #b0b0b0;
-            }
-            .exercises .note{
-              font-size: small;
-              color: #8f8f8f;
-            }
-            .btn-edit {
-              background-color: #ffcc33;
-              color: #000000;
-              border: none;
-              border-radius: 4px;
-              padding: 5px 10px;
-              font-size: 0.9rem;
-              transition: background-color 0.3s ease;
-              text-decoration: none;
-              font-weight: bold;
 
+            .exercises .name,
+            .exercises .exercise_title,
+            .exercises .descr,
+            .exercises .note {
+              color: #fff;
             }
-            .btn-edit:hover {
-              background-color: #e6b832;
+
+            .btn-add-workout,
+            .btn-edit,
+            .glowing-button {
+              background-color: #fff;
+              color: #000;
+              border: 1px solid #fff;
+              border-radius: 4px;
+              padding: 10px 16px;
+              font-size: 0.95rem;
+              font-weight: 700;
+              text-decoration: none;
+              transition: all 0.2s ease;
             }
+
+            .btn-add-workout:hover,
+            .btn-edit:hover,
+            .glowing-button:hover {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+            }
+
             .btn-dialog {
-              background-color: #5c5c5c;
-              color: #ffffff;
-              border: none;
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
               border-radius: 4px;
-              padding: 5px 10px;
+              padding: 6px 10px;
               font-size: 0.9rem;
-              transition: background-color 0.3s ease;
+              font-weight: 600;
               text-decoration: none;
-              font-weight: bold;
-
+              transition: all 0.2s ease;
             }
+
             .btn-dialog:hover {
-              background-color: #909090;
-              color: #000000;
-
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
             }
+
             .btn-delete {
-              background-color: #dc3545;
-              color: #ffffff;
-              border: none;
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
               border-radius: 4px;
-              padding: 5px 10px;
+              padding: 6px 10px;
               font-size: 0.9rem;
-              transition: background-color 0.3s ease;
-              text-decoration: none;
-              font-weight: bold;
+              font-weight: 600;
+              transition: all 0.2s ease;
+            }
 
+            .btn-edit,
+            .btn-delete,
+            .btn-dialog {
+              min-width: 44px;
+              min-height: 36px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
             }
+
             .btn-delete:hover {
-              background-color: #b02a37;
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
             }
+
+            .btn-outline-primary {
+              background-color: #000;
+              color: #fff;
+              font-weight: 700;
+              border: 1px solid #fff;
+              border-radius: 5px;
+              padding: 10px 18px;
+              font-size: 1rem;
+              transition: all 0.2s ease;
+            }
+
+            .btn-primary {
+              background-color: #fff;
+              color: #000;
+              font-weight: 700;
+              border: 1px solid #000;
+              border-radius: 5px;
+              padding: 10px 18px;
+              font-size: 1rem;
+              transition: all 0.2s ease;
+            }
+
+            .btn-primary:hover {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+            }
+
+
+            .btn-outline-primary:hover {
+              background-color: #ffffff;
+              color: #000000;
+              border: 1px solid #000000;
+            }
+
             footer {
               text-align: center;
               margin-top: 40px;
-              color: #b0b0b0;
+              color: #fff;
             }
+
             .bottom-bar {
               position: fixed;
               bottom: 0;
               left: 0;
               width: 100%;
-              background-color: #1e1e1e;
-              padding: 15px;
-              box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+              background-color: #000;
+              padding: 12px 16px;
+              border-top: 1px solid #fff;
               text-align: center;
             }
-            .btn-add-workout {
-              background-color: #ffcc33;
-              color: #121212;
-              font-weight: bold;
-              border: none;
-              border-radius: 5px;
-              padding: 10px 20px;
-              font-size: 1rem;
-              transition: background-color 0.3s ease;
-            }
-            .btn-add-workout:hover {
-              background-color: #e6b832;
-              
-            }
-            .btn-back {
-              background-color: #6c757d;
-              color: #ffffff;
-              font-weight: bold;
-              border: none;
-              border-radius: 5px;
-              padding: 10px 20px;
-              font-size: 1rem;
-              transition: background-color 0.3s ease;
-            }
-            .btn-back:hover {
-              background-color: #565e64;
-            }
-            footer {
-              text-align: center;
-              margin-top: 40px;
-              color: #b0b0b0;
-            }
-             /* Stile per la finestra di dialogo */
+
             .modal-content {
-              background-color: #333!important;
-              color: #ffffff!important; /* Testo scuro per migliore leggibilità */
+              background-color: #000 !important;
+              color: #fff !important;
+              border: 1px solid #fff;
             }
-            .modal-header {
-              background-color: #fdbe00;
-              color: #000000!important;
+
+            .modal-header,
+            .modal-footer {
+              background-color: #000;
+              color: #fff !important;
+              border: none;
             }
+
             .btn-close {
+              filter: invert(1);
+            }
+
+            .table {
               color: #fff;
             }
-            .modal-footer {
-              background-color: #333!important;
-            }
-            .glowing-button {
-              display: inline-block;
-              padding: 10px 20px;
-              font-size: 16px;
-              font-weight: bold;
-              color: white;
-              background-color: #e6b832; /* Main button color */
-              border: none;
-              border-radius: 5px;
-              text-decoration: none;
-              text-align: center;
-              transition: all 0.3s ease;
-              animation: glow 1.5s infinite; /* Infinite animation loop */
+
+            .table-dark {
+              --bs-table-bg: #000;
+              --bs-table-striped-bg: #000;
+              --bs-table-hover-bg: #000;
+              --bs-table-color: #fff;
+              color: #fff;
             }
 
-            .glowing-button:hover {
-              background-color: #d4a62f; /* Slightly darker shade on hover */
-              transform: scale(1.1); /* Enlarge on hover */
+            .table > :not(caption) > * > * {
+              border-color: #fff;
             }
 
-            @keyframes glow {
-              0% {
-                box-shadow: 0 0 10px #e6b832, 0 0 20px #e6b832, 0 0 30px #e6b832;
-              }
-              50% {
-                box-shadow: 0 0 20px #d4a62f, 0 0 30px #d4a62f, 0 0 40px #d4a62f;
-              }
-              100% {
-                box-shadow: 0 0 10px #e6b832, 0 0 20px #e6b832, 0 0 30px #e6b832;
-              }
+            .card {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+            }
+
+            .bg-dark,
+            .text-bg-dark {
+              background-color: #000 !important;
+              color: #fff !important;
+              border: 1px solid #fff;
+            }
+
+            .border-warning {
+              border-color: #fff !important;
+            }
+
+            .btn-outline-warning {
+              color: #fff;
+              border-color: #fff;
+            }
+
+            .btn-outline-warning:hover {
+              background-color: #fff;
+              color: #000;
+            }
+
+            .btn-primary {
+              background-color: #fff;
+              border-color: #fff;
+              color: #000;
+            }
+
+            .btn-primary:hover {
+              background-color: #000;
+              border-color: #fff;
+              color: #fff;
+            }
+
+            .btn-link,
+            .btn-link:hover,
+            .text-warning,
+            .text-white-50,
+            .text-danger,
+            .text-primary,
+            .text-success,
+            .text-info {
+              color: #fff !important;
+            }
+
+            .alert {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+            }
+
+            .form-control,
+            .form-select {
+              background-color: #000;
+              color: #fff;
+              border: 1px solid #fff;
+              border-radius: 6px;
+            }
+
+            .form-control:focus,
+            .form-select:focus {
+              border-color: #fff;
+              box-shadow: none;
+              background-color: #000;
+              color: #fff;
             }
         </style>
       {% endblock %}

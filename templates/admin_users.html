@@ -4,11 +4,11 @@
 <style>
     .unlock-code {
         cursor: pointer;
-        color: #007bff; /* Cambia colore se necessario */
+        color: #fff; /* Cambia colore se necessario */
         text-decoration: underline; /* Indica che è interattivo */
     }
     .unlock-code:hover {
-        color: #0056b3; /* Colore al passaggio del mouse */
+        color: #fff; /* Colore al passaggio del mouse */
     }
 </style>
 
@@ -109,6 +109,6 @@
 
 <!-- Barra in basso per aggiungere workout -->
 <div class="bottom-bar">
-    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
 </div>
 {% endblock %}

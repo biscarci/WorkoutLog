@@ -15,12 +15,12 @@
             </fieldset>
             <fieldset class="col-12">
                 <div class="mb-2">
-                    {{ render_field(form.type, class_="form-control", placeholder="Workout Type1") }}
+                    {{ render_field(form.name, class_="form-control", placeholder="Workout Name") }}
                 </div>
             </fieldset>
             <fieldset class="col-12">
                 <div class="mb-2">
-                    {{ render_field(form.duration, class_="form-control", placeholder="Duration") }}
+                    {{ render_field(form.description, class_="form-control", placeholder="Description") }}
                 </div>
             </fieldset>
             <fieldset class="col-12 text-center">
@@ -36,7 +36,7 @@
 
 <!-- Barra in basso per aggiungere workout -->
 <footer>
-    <a class="btn btn-back btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
 </footer>
 {% endblock %}
          

@@ -1,29 +1,52 @@
 <!-- Selettore Slider per i Mesi -->
 
-{% set months_prev = 12 if month == 1 else month - 1 %}
-{% set months_next = 1 if month == 12 else month + 1 %}
-{% set year_prev = year - 1 if month == 1 else year %}
-{% set year_next = year + 1 if month == 12 else year %}
-
-<div class="month-slider d-flex justify-content-center align-items-center mb-3">
+<div class="month-slider d-flex justify-content-center align-items-center mb-4">
     <a 
         id="prevMonth" 
         class="btn btn-outline-warning btn-arrow me-2" 
-        href="{{ url_for('select_workout_date', month=months_prev, year=year_prev) }}"
-        ><i class="bi bi-chevron-left"></i>
+        href="{{ url_for('select_workout_date', day=prev_day.day, month=prev_day.month, year=prev_day.year) }}"
+        ><i class="bi bi-chevron-double-left"></i>
     </a>
     
-        <span id="currentMonth" class="mx-3">{{date.strftime("%B %Y").title()}}</span>
+        <span id="currentMonth" class="mx-3">{{date.strftime("%d %B %Y").title()}}</span>
     
     <a 
         id="nextMonth" 
         class="btn btn-outline-warning btn-arrow ms-2"
-        href="{{ url_for('select_workout_date', month=months_next, year=year_next) }}"
-        ><i class="bi bi-chevron-right"></i>
+        href="{{ url_for('select_workout_date', day=next_day.day, month=next_day.month, year=next_day.year) }}"
+        ><i class="bi bi-chevron-double-right"></i>
     </a>
+
+    
 </div>
 
+<div class="days-slider d-flex justify-content-center align-items-center mb-4">
+    <div class="weekdays d-flex">
+        {% for day in weekdays %}
+            <div class="d-flex flex-column align-items-center mx-3">
+                
+                <!-- Lettera del giorno -->
+                <span class="mb-1 fw-bold">
+                    {{ day.strftime("%A")[0].upper() }}
+                </span>
 
+                <!-- Bottone giorno -->
+                {% if day == date %}
+                    <a href="{{ url_for('select_workout_date', day=day.day, month=day.month, year=day.year) }}"
+                       class="btn btn-sm btn-primary">
+                        {{ day.strftime("%d") }}
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('select_workout_date', day=day.day, month=day.month, year=day.year) }}"
+                       class="btn btn-sm btn-outline-primary">
+                        {{ day.strftime("%d") }}
+                    </a>
+                {% endif %}
+
+            </div>
+        {% endfor %}
+    </div>
+</div>
 
 
 {% set months = [
@@ -41,12 +64,18 @@
         <option value="{{date.year-3}}">{{date.year-3}}</option>
     </select>
     <label for="monthSelect" class="form-label">Mese:</label>
-    <select id="monthSelect" class="form-select">
+    <select id="monthSelect" class="form-select mb-3">
         {% for i in range(12) %}
             <option value="{{i}}">{{  months[i]  }}</option>
         {% endfor %}
     </select>
-    <a id="setMonthYear" class="btn btn-primary mt-3" href="{{ url_for('select_workout_date', month=date.month, year=date.year) }}">Imposta</a>
+    <label for="monthSelect" class="form-label ">Giorno:</label>
+    <select id="daySelect" class="form-select">
+        {% for i in range(30) %}
+            <option value="{{i + 1}}">{{  i + 1  }}</option>
+        {% endfor %}
+    </select>
+    <a id="setMonthYear" class="btn btn-primary mt-3" href="{{ url_for('select_workout_date', day=date.day, month=date.month, year=date.year) }}">Imposta</a>
 </div>
 
 
@@ -129,7 +158,8 @@
         top: 40%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background-color: #1e1e1e;
+        background-color: #000000;
+        border: #ffffff 1px solid;
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
@@ -142,15 +172,15 @@
     }
 
     .form-select {
-        background-color: #2a2a2a;
+        background-color: #161616;
         color: #f5f5f5;
         border: none;
         border-radius: 5px;
     }
 
     #setMonthYear {
-        background-color: #ffcc33;
-        color: #121212;
-        border: none;
+        background-color: #ffffff;
+        color: #000000;
+        border: 1 px solid #ffffff;
     }
 </style>
