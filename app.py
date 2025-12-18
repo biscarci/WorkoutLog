@@ -20,7 +20,7 @@ from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 
 # Importazioni del progetto locale
-from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
+from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
                    RegistrationForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
 from utils import (allowed_file, 
                    random_motivational_phrase, random_rest_message, parse_week_text)
@@ -32,8 +32,7 @@ from markupsafe import Markup, escape
 app = Flask(__name__)
 
 # Configurazione Flask App
-
-app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL') or 'sqlite:///workout.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -153,12 +152,18 @@ def superuser_required(f):
 
 @app.before_request
 def create_tables():
-    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-    # Controlla se il file esiste
-    db_path = os.path.join(os.path.abspath('.'), db_path)
-    if not os.path.exists(db_path):
+    uri = app.config['SQLALCHEMY_DATABASE_URI']
+
+    # CREA TABELLE SOLO PER SQLITE
+    if uri.startswith('sqlite:///'):
+        db_path = uri.replace('sqlite:///', '')
+        db_path = os.path.join(os.path.abspath('.'), db_path)
+        if not os.path.exists(db_path):
+            db.create_all()
+    else:
+        # PostgreSQL: crea tabelle una volta sola
         db.create_all()
-   
+
     if current_user.is_authenticated:
         current_user.last_login = datetime.now(timezone.utc)
         if current_user.total_workouts_added >= 30 and current_user.demo_mode:
@@ -391,6 +396,49 @@ def register():
     return render_template('register.html', form=form)
 
 
+@app.route('/register/admin', methods=['GET', 'POST'])
+def register_admin():
+    form = AdminRegistrationForm()
+
+    if current_user.is_authenticated:
+        if current_user.is_superuser:
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('dashboard'))
+
+    if form.validate_on_submit():
+        admin_reg_code = os.getenv('ADMIN_REG_CODE', 'PAZZESCO')
+        if (form.admin_code.data or '').strip() != admin_reg_code:
+            flash('Codice admin non valido.', 'danger')
+            return redirect(url_for('register_admin'))
+
+        existing_username = User.query.filter_by(username=form.username.data).first()
+        existing_email = User.query.filter_by(email=form.email.data).first()
+
+        if existing_username:
+            flash('Username is already taken. Please choose another one.', 'danger')
+            return redirect(url_for('register_admin'))
+
+        if existing_email:
+            flash('Email is already registered. Please use a different email.', 'danger')
+            return redirect(url_for('register_admin'))
+
+        new_admin = User(
+            username=form.username.data,
+            email=form.email.data,
+            is_superuser=True,
+            is_enabled=True,
+            demo_mode=False,
+        )
+        new_admin.set_password(form.password.data)
+        db.session.add(new_admin)
+        db.session.commit()
+        logger(new_admin.id, 'New admin registered')
+        flash('Admin registration successful! You can now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('admin_register.html', form=form)
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -398,7 +446,7 @@ def login():
     # Redirect authenticated users to their respective dashboards
     if current_user.is_authenticated:
         if current_user.is_superuser:
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('dashboard'))
         return redirect(url_for('dashboard'))
 
     if form.validate_on_submit():
@@ -414,7 +462,7 @@ def login():
 
             # Redirect based on user role
             if user.is_superuser:
-                return redirect(url_for('admin_dashboard'))
+                return redirect(url_for('dashboard'))
             return redirect(url_for('dashboard'))
 
         # Handle login failure

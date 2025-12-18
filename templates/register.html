@@ -7,7 +7,7 @@
   <h1 class="text-center">Registrati</h1>
   <form method="POST" action="{{ url_for('register') }}">
     {{ form.csrf_token() }}
-    {{ render_form(form, button_map={'submit':'edit'}) }}
+    {{ render_form(form) }}
   </form>
   <hr>
   <div class="row">

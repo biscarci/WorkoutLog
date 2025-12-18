@@ -15,6 +15,15 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Registrati')
 
 
+class AdminRegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=2, max=200)])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
+    admin_code = StringField('Codice Admin', validators=[DataRequired(), Length(min=1, max=50)])
+    submit = SubmitField('Crea Admin')
+
+
 
 # Form di login
 class LoginForm(FlaskForm):

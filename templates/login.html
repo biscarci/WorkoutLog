@@ -6,9 +6,9 @@
     <h1 class="text-center">Login</h1>
     <form method="POST" action="{{ url_for('login') }}">
         {{ form.csrf_token() }}
-        {{ render_form(form, button_map={'submit':'edit'}) }}
+        {{ render_form(form) }}
     </form>
-    <a href="{{ url_for('register') }}" class="btn btn-edit btn-block mt-3">Registrati</a>
+    <a href="{{ url_for('register') }}" class="btn btn-add-workout btn-block mt-3">Registrati</a>
 </div>
 {% endblock %}
 
