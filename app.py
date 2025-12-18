@@ -4,6 +4,8 @@ import click
 import os
 import random
 import string
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 import hmac
@@ -14,6 +16,7 @@ from flask import Flask, Blueprint, abort, flash, jsonify, redirect, render_temp
 from flask.cli import with_appcontext
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
+import requests
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
@@ -150,19 +153,60 @@ def superuser_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def bootstrap_superuser_from_env():
+    """Create a default superuser from env vars, idempotent."""
+    if app.config.get('_BOOTSTRAP_SUPERUSER_RAN'):
+        return
+    app.config['_BOOTSTRAP_SUPERUSER_RAN'] = True
+
+    username = os.getenv('ADMIN_USERNAME')
+    email = os.getenv('ADMIN_EMAIL')
+    password = os.getenv('ADMIN_PASSWORD')
+    if not username or not email or not password:
+        return
+    try:
+        created = create_superuser(username=username, email=email, password=password)
+        if created:
+            app.logger.warning("Bootstrapped superuser '%s' from env vars", username)
+    except Exception:
+        app.logger.exception('Failed to bootstrap superuser from env vars')
+
+
+def start_keepalive_worker():
+    if app.config.get('_KEEPALIVE_STARTED'):
+        return
+    app.config['_KEEPALIVE_STARTED'] = True
+
+    def worker():
+        while True:
+            time.sleep(300)
+            try:
+                with app.app_context():
+                    last = Log.query.order_by(Log.timestamp.desc()).first()
+                    now = datetime.utcnow()
+                    inactive = (last is None) or ((now - last.timestamp) > timedelta(minutes=5))
+                    url = os.getenv('KEEPALIVE_URL')
+                    if inactive and url:
+                        try:
+                            requests.get(url, timeout=5)
+                        except Exception:
+                            app.logger.exception('Keepalive ping failed')
+            except Exception:
+                app.logger.exception('Keepalive worker error')
+
+    threading.Thread(target=worker, daemon=True, name="keepalive-worker").start()
+
+
 @app.before_request
 def create_tables():
-    uri = app.config['SQLALCHEMY_DATABASE_URI']
-
-    # CREA TABELLE SOLO PER SQLITE
-    if uri.startswith('sqlite:///'):
-        db_path = uri.replace('sqlite:///', '')
-        db_path = os.path.join(os.path.abspath('.'), db_path)
-        if not os.path.exists(db_path):
+    if not app.config.get('_DB_INIT_DONE'):
+        try:
             db.create_all()
-    else:
-        # PostgreSQL: crea tabelle una volta sola
-        db.create_all()
+        except Exception:
+            app.logger.exception('db.create_all failed')
+        bootstrap_superuser_from_env()
+        start_keepalive_worker()
+        app.config['_DB_INIT_DONE'] = True
 
     if current_user.is_authenticated:
         current_user.last_login = datetime.now(timezone.utc)
@@ -546,7 +590,7 @@ def dashboard():
     end_date = start_date + timedelta(days=1)
 
     owner = current_user
-    workouts = Workout.query.filter_by(user_id=owner.id).filter(
+    workouts = Workout.query.filter(
         Workout.date >= start_date, Workout.date < end_date
     ).order_by(Workout.date.asc()).all()
 
