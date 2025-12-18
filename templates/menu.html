@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h1 class="text-center">{{ title }}</h1>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="d-grid gap-3">
+        <a class="btn btn-add-workout" href="{{ url_for('profile') }}" role="button">
+          Profilo
+        </a>
+        <a class="btn btn-add-workout" href="{{ url_for('user_stats') }}" role="button">
+          Statistiche
+        </a>
+        <a class="btn btn-back" href="{{ url_for('logout') }}" role="button">
+          Logout
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <a class="btn btn-add-workout btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}
+

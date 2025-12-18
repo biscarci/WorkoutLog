@@ -6,7 +6,7 @@
     <style>
         #description {
             width: 100%;
-            min-height: 400px;
+            min-height: 200px;
             max-height: 70vh;
             box-sizing: border-box;
         }
@@ -29,6 +29,101 @@
     </div>
   </div>
 
+  
+  <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #000; border-bottom: 1px solid #fff;">
+            <h3 class="mb-0">Statistiche per esercizio</h3>
+            <button
+              id="toggleExerciseStats"
+              type="button"
+              class="btn btn-dialog"
+              data-bs-toggle="collapse"
+              data-bs-target="#exerciseStatsBody"
+              aria-expanded="true"
+              aria-controls="exerciseStatsBody"
+              aria-label="Chiudi/Apri"
+            >
+              <i class="bi bi-chevron-up" id="exerciseStatsIcon"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="exerciseStatsBody">
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-8">
+                    <label for="exerciseFilter" class="form-label">Esercizio</label>
+                    <select id="exerciseFilter" class="form-select">
+                        <option value="" {% if not selected_exercise %}selected{% endif %}>Seleziona...</option>
+                        {% for ex in exercises %}
+                            <option value="{{ ex }}" {% if selected_exercise == ex %}selected{% endif %}>{{ ex }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+             
+            </div>
+
+            {% if selected_exercise %}
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div style="font-size: small;">Peso max</div>
+                        <div style="font-weight: 700;">{{ max_weight if max_weight is not none else '-' }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-size: small;">Reps max</div>
+                        <div style="font-weight: 700;">{{ max_reps if max_reps is not none else '-' }}</div>
+                    </div>
+                </div>
+                {% if best_1rm %}
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-dark table-borderless table-sm mb-0" style="font-size: x-small;">
+                        <thead>
+                            <tr>
+                                <th scope="col">%</th>
+                                <th scope="col" class="text-end">Kg</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rm_percent_table %}
+                            <tr>
+                                <td>{{ row.percent }}</td>
+                                <td class="text-end">{{ row.kg }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr style="font-size: small;">
+                                <th>Data</th>
+                                <th>Peso</th>
+                                <th>Reps</th>
+                            </tr>
+                        </thead>
+                        <tbody style="font-size: small;">
+                            {% for s in stats_exercise %}
+                            <tr>
+                                <td>{{ s.date.strftime('%d/%m/%Y') if s.date else '-' }}</td>
+                                <td>{{ s.weight if s.weight is not none else '' }}</td>
+                                <td>{{ s.reps if s.reps is not none else '' }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not stats_exercise %}
+                            <tr><td colspan="3" class="text-center">Nessuna statistica per questo esercizio</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+          </div>
+        </div>
+    </div>
+
+
   <!-- FORM CARD -->
   <div class="row justify-content-center mb-4">
     <div class="col">
@@ -37,6 +132,7 @@
           <form method="POST" action="{{ url_for('add_performance', id=workout.id) }}">
             {{ form.csrf_token() }}
 
+            {{ render_field(form.date, class_="form-control") }}
             {{ render_field(form.description, class_="form-control") }}
 
             <div class="d-grid mt-4">
@@ -112,6 +208,38 @@
       </div>
     </div>
   </div>
+
+  
+<script>
+    (function () {
+        const select = document.getElementById('exerciseFilter');
+        if (!select) return;
+        const base = "{{ url_for('add_performance', id=workout.id) }}";
+        select.addEventListener('change', () => {
+            const value = select.value || '';
+            if (!value) {
+                window.location.href = base;
+                return;
+            }
+            window.location.href = `${base}?exercise=${encodeURIComponent(value)}`;
+        });
+    })();
+
+    (function () {
+        const body = document.getElementById('exerciseStatsBody');
+        const icon = document.getElementById('exerciseStatsIcon');
+        if (!body || !icon) return;
+
+        body.addEventListener('shown.bs.collapse', () => {
+            icon.classList.remove('bi-chevron-down');
+            icon.classList.add('bi-chevron-up');
+        });
+        body.addEventListener('hidden.bs.collapse', () => {
+            icon.classList.remove('bi-chevron-up');
+            icon.classList.add('bi-chevron-down');
+        });
+    })();
+</script>
 
 </div>
 

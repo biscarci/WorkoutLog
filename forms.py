@@ -48,6 +48,7 @@ class AddWeeklyWorkoutForm(FlaskForm):
     submit = SubmitField('Add Weekly Workouts')
 
 class PerformanceForm(FlaskForm):
+    date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
     submit = SubmitField('Add Performance')
 
@@ -62,6 +63,10 @@ class UserStatisticForm(FlaskForm):
     weight = FloatField('Weight (Kg)', validators=[Optional()])
     reps = IntegerField('Reps', validators=[Optional()])
     submit = SubmitField('Save Stats')
+
+
+class BulkDeleteStatsForm(FlaskForm):
+    submit = SubmitField('Delete Selected')
 
 
 class UpdateProfileForm(FlaskForm):

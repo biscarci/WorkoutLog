@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Importazioni standard della libreria Python
 import click
 import locale
@@ -20,8 +21,8 @@ from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 
 # Importazioni del progetto locale
-from forms import (AddWorkoutForm, LoginForm, RegistrationForm, AddWeeklyWorkoutForm,
-                   PerformanceForm, EditPerformanceForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
+from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
+                   RegistrationForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
 from utils import (allowed_file, 
                    random_motivational_phrase, random_rest_message, parse_week_text)
 
@@ -40,7 +41,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workout.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['GITHUB_WEBHOOK_SECRET'] = 'ab443a73a819880c1a84923f26fcb97281246b4afddc669356f08bd22cd0d1b8'
 
 
 db = SQLAlchemy(app)
@@ -86,6 +86,8 @@ class User(UserMixin, db.Model):
     def has_super_access(self):
         return self.is_superuser
     
+    def get_statistics(self):
+        return UserStatistic.query.filter_by(user_id=self.id).all()
 
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,6 +101,7 @@ class Performance(db.Model):
     date = db.Column(db.DateTime, nullable=True)
     description = db.Column(db.String(150), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 
 class WorkoutPerformance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -477,6 +480,12 @@ def profile():
 
     return render_template('profile.html', form=form)
 
+
+@app.route('/menu', methods=['GET'])
+@login_required
+def menu():
+    return render_template('menu.html', title='Menu')
+
 @app.route('/', methods=['GET'])
 @app.route('/dashboard', methods=['GET'])
 @login_required
@@ -663,10 +672,64 @@ def add_performance(id):
     form = PerformanceForm()
     w = Workout.query.get_or_404(id)
 
+    selected_exercise = (request.args.get('exercise') or '').strip()
+    exercises = [
+        row[0]
+        for row in db.session.query(UserStatistic.exercise)
+        .filter_by(user_id=current_user.id)
+        .filter(UserStatistic.exercise.isnot(None))
+        .distinct()
+        .order_by(UserStatistic.exercise.asc())
+        .all()
+    ]
+
+    stats_exercise = []
+    max_weight = None
+    max_reps = None
+    best_1rm = None
+    rm_percent_table = []
+    if selected_exercise:
+        stats_exercise = UserStatistic.query.filter_by(
+            user_id=current_user.id,
+            exercise=selected_exercise
+        ).order_by(UserStatistic.date.desc()).limit(15).all()
+
+        weights = [s.weight for s in stats_exercise if s.weight is not None]
+        reps = [s.reps for s in stats_exercise if s.reps is not None]
+        max_weight = max(weights) if weights else None
+        max_reps = max(reps) if reps else None
+
+        # Stima 1RM (formula tipo Brzycki) a partire dalle statistiche disponibili
+        one_rm_estimates = []
+        for s in stats_exercise:
+            if s.weight is None or s.reps is None:
+                continue
+            if s.reps <= 0:
+                continue
+            # evita divisione per ~0 con reps troppo alte
+            denom = 1.0278 - (0.0278 * float(s.reps))
+            if denom <= 0:
+                continue
+            one_rm_estimates.append(float(s.weight) / denom)
+
+        best_1rm = max(one_rm_estimates) if one_rm_estimates else None
+        if best_1rm:
+            for p in range(100, 39, -5):
+                rm_percent_table.append(
+                    {
+                        "percent": p,
+                        # arrotonda a 0.5kg per una tabella più “da palestra”
+                        "kg": round((best_1rm * (p / 100.0)) * 2) / 2,
+                    }
+                )
+
     workout_performances = WorkoutPerformance.query.filter_by(workout_id=id).order_by(WorkoutPerformance.id.desc()).all()
+
+
     if form.validate_on_submit():
+        perf_date = datetime.combine(form.date.data, datetime.min.time()) if form.date.data else datetime.now()
         perf = Performance(
-            date= datetime.now(),
+            date=perf_date,
             description=form.description.data,
             user_id=current_user.id
         )
@@ -678,9 +741,22 @@ def add_performance(id):
         db.session.commit()
         flash('Performance salvata con successo', 'success')
         logger(current_user.id, 'New performance added')
-        return redirect(url_for('add_performance', id=w.id))
+        return redirect(url_for('add_performance', id=w.id, exercise=selected_exercise or None))
 
-    return render_template('add_performance.html', title='Add Performance', workout=w, form=form, workout_performances=workout_performances)
+    return render_template(
+        'add_performance.html', 
+        title='Add Performance', 
+        workout=w, 
+        form=form, 
+        workout_performances=workout_performances,
+        exercises=exercises,
+        selected_exercise=selected_exercise,
+        stats_exercise=stats_exercise,
+        max_weight=max_weight,
+        max_reps=max_reps,
+        best_1rm=best_1rm,
+        rm_percent_table=rm_percent_table,
+        )
 
 
 @app.route('/performance/edit/<int:id>', methods=['GET', 'POST'])
@@ -695,7 +771,8 @@ def edit_performance(id):
 
     form = EditPerformanceForm()
     if form.validate_on_submit():
-        perf.date = form.date.data or perf.date
+        if form.date.data:
+            perf.date = datetime.combine(form.date.data, datetime.min.time())
         perf.description = form.description.data
         db.session.commit()
         flash('Performance aggiornata', 'success')
@@ -705,7 +782,7 @@ def edit_performance(id):
         return redirect(url_for('dashboard'))
 
     if request.method == 'GET':
-        form.date.data = perf.date
+        form.date.data = perf.date.date() if isinstance(perf.date, datetime) else perf.date
         form.description.data = perf.description
 
     return render_template('edit_performance.html', title='Edit Performance', form=form, workout_id=workout_id, perf_id=perf.id)
@@ -736,6 +813,8 @@ def delete_performance(id):
 @login_required
 def user_stats():
     form = UserStatisticForm()
+    delete_form = BulkDeleteStatsForm()
+    selected_exercise = (request.args.get('exercise') or '').strip()
     if form.validate_on_submit():
         stat = UserStatistic(
             user_id=current_user.id,
@@ -750,8 +829,88 @@ def user_stats():
         logger(current_user.id, 'User stats added')
         return redirect(url_for('user_stats'))
 
-    stats = UserStatistic.query.filter_by(user_id=current_user.id).order_by(UserStatistic.date.desc()).all()
-    return render_template('stats.html', title='Statistiche', form=form, stats=stats)
+    exercises = [
+        row[0]
+        for row in db.session.query(UserStatistic.exercise)
+        .filter_by(user_id=current_user.id)
+        .filter(UserStatistic.exercise.isnot(None))
+        .distinct()
+        .order_by(UserStatistic.exercise.asc())
+        .all()
+    ]
+
+    stats_query = UserStatistic.query.filter_by(user_id=current_user.id)
+    if selected_exercise:
+        stats_query = stats_query.filter(UserStatistic.exercise == selected_exercise)
+    stats = stats_query.order_by(UserStatistic.date.desc()).all()
+
+    weights = [s.weight for s in stats if s.weight is not None]
+    reps = [s.reps for s in stats if s.reps is not None]
+    max_weight = max(weights) if weights else None
+    max_reps = max(reps) if reps else None
+
+    return render_template(
+        'stats.html',
+        title='Statistiche',
+        form=form,
+        delete_form=delete_form,
+        stats=stats,
+        exercises=exercises,
+        selected_exercise=selected_exercise,
+        max_weight=max_weight,
+        max_reps=max_reps,
+    )
+
+
+@app.route('/stats/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_stat(id):
+    stat = UserStatistic.query.get_or_404(id)
+    if stat.user_id != current_user.id and not current_user.is_superuser:
+        abort(403)
+
+    form = UserStatisticForm()
+    if form.validate_on_submit():
+        stat.date = form.date.data
+        stat.exercise = form.exercise.data
+        stat.weight = form.weight.data
+        stat.reps = form.reps.data
+        db.session.commit()
+        flash('Statistica aggiornata', 'success')
+        logger(current_user.id, 'User stats updated')
+        return redirect(url_for('user_stats'))
+
+    if request.method == 'GET':
+        form.date.data = stat.date
+        form.exercise.data = stat.exercise
+        form.weight.data = stat.weight
+        form.reps.data = stat.reps
+
+    return render_template('edit_stat.html', title='Edit Stat', form=form, stat_id=stat.id)
+
+
+@app.route('/stats/delete', methods=['POST'])
+@login_required
+def delete_stats():
+    delete_form = BulkDeleteStatsForm()
+    if not delete_form.validate_on_submit():
+        abort(400)
+
+    ids = request.form.getlist('selected_ids')
+    ids = [int(i) for i in ids if str(i).isdigit()]
+    if not ids:
+        flash('Nessuna statistica selezionata', 'info')
+        return redirect(url_for('user_stats'))
+
+    query = UserStatistic.query.filter(UserStatistic.id.in_(ids))
+    if not current_user.is_superuser:
+        query = query.filter_by(user_id=current_user.id)
+
+    deleted = query.delete(synchronize_session=False)
+    db.session.commit()
+    flash(f'Eliminate {deleted} statistiche', 'success')
+    logger(current_user.id, f'User stats deleted: {deleted}')
+    return redirect(url_for('user_stats'))
 
 @app.errorhandler(404)
 def not_found_error(error):
