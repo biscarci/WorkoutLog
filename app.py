@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Importazioni standard della libreria Python
 import click
-import locale
 import os
 import random
 import string
@@ -32,15 +31,12 @@ from markupsafe import Markup, escape
 
 app = Flask(__name__)
 
-
-locale.setlocale(locale.LC_ALL, 'it_IT')      
-
 # Configurazione Flask App
-app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workout.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['UPLOAD_FOLDER'] = 'uploads'
+
 
 
 db = SQLAlchemy(app)
