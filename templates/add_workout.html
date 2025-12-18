@@ -3,8 +3,24 @@
 
 {% block content %}
 <div class="container">   
+    <style>
+        #description {
+            width: 100%;
+            min-height: 300px;
+            max-height: 70vh;
+            box-sizing: border-box;
+        }
+
+        /* Smartphone */
+        @media (max-width: 768px) {
+            #description {
+                min-height: 180px;
+                max-height: 50vh;
+            }
+        }
+    </style>
     <div class="row">
-        <h1 class="text-center w-100 mb-4">Add Workout</h1> <!-- 'w-100' assicura che l'intestazione occupi tutta la larghezza -->
+        <h1 class="text-center w-100 mb-4">Add Workouts</h1> <!-- 'w-100' assicura che l'intestazione occupi tutta la larghezza -->
     </div>
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
@@ -21,44 +37,9 @@
             </form>
         </div>
     </div>
-    <hr>
-   
-    <div class="row justify-content-center mb-3 mt-4">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('upload_workout') }}" role="button" aria-expanded="false">
-                <i class="bi bi-file-earmark-arrow-up"></i> Workout
-            </a>
-            
-        </div>
-        
-    </div>
-    <div class="row justify-content-center mb-3">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('profile') }}" role="button" aria-expanded="false">
-                <i class="bi bi-person"></i> Profile
-            </a>
-        </div>
-    </div>
-    {% if user.has_super_access %}
-    <div class="row justify-content-center mb-3">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-add-workout btn-block w-100" href="{{ url_for('admin_dashboard') }}" role="button" aria-expanded="false">
-                <i class="bi bi-speedometer2"></i> Admin
-            </a>
-        </div>
-    </div>
-    {% endif %}
-    <div class="row justify-content-center mb-3">
-        <div class="col-md-6 col-lg-4 d-flex justify-content-center">
-            <a class="btn btn-outline-primary btn-block w-100" href="{{ url_for('logout') }}" role="button" aria-expanded="false">
-                <i class="bi bi-box-arrow-left"></i> Logout
-            </a>
-        </div>
-    </div>
-
+    
 </div>
-
-        
+       
   
 <!-- Barra in basso per aggiungere workout -->
 <div class="bottom-bar">

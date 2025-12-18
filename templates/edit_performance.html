@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="text-center mb-4">
+    <h3 class="fw-bold">Edit Performance</h3>
+  </div>
+
+  <div class="row justify-content-center mb-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('edit_performance', id=perf_id) }}">
+            {{ form.csrf_token() }}
+            {{ render_field(form.date, class_="form-control") }}
+            {{ render_field(form.description, class_="form-control") }}
+            <div class="d-grid mt-4">
+              {{ render_field(form.submit) }}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar text-center py-3">
+  {% if workout_id %}
+    <a class="btn btn-outline-primary" href="{{ url_for('add_performance', id=workout_id) }}">Back</a>
+  {% else %}
+    <a class="btn btn-outline-primary" href="{{ url_for('dashboard') }}">Dashboard</a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -20,12 +20,13 @@ from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 
 # Importazioni del progetto locale
-from forms import (AddWorkoutForm, LoginForm, RegistrationForm, 
-                   PerformanceForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
+from forms import (AddWorkoutForm, LoginForm, RegistrationForm, AddWeeklyWorkoutForm,
+                   PerformanceForm, EditPerformanceForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
 from utils import (allowed_file, 
-                   get_frasi_motivazionali, get_frasi_motivazionali_home, 
-                   get_month_start_end, get_text_from_image_openai)
+                   random_motivational_phrase, random_rest_message, parse_week_text)
 
+
+from markupsafe import Markup, escape
 
 
 app = Flask(__name__)
@@ -46,6 +47,19 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 bootstrap = Bootstrap5(app)
+
+@app.template_filter('nl2br')
+def nl2br(value):
+    if value is None:
+        return ""
+    return Markup('<br>'.join(escape(value).splitlines()))
+
+@app.context_processor
+def inject_utils():
+    return dict(
+        random_motivational_phrase=random_motivational_phrase,
+        random_rest_message=random_rest_message
+    )
 
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
@@ -90,6 +104,15 @@ class WorkoutPerformance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
     performance_id = db.Column(db.Integer, db.ForeignKey('performance.id'), nullable=False)
+
+    def get_performance(self):
+        return Performance.query.get(self.performance_id)
+    
+    def get_workout(self):
+        return Workout.query.get(self.workout_id)
+    
+    def get_user(self):
+        return User.query.get(self.get_performance().user_id)
 
 class UserStatistic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -484,7 +507,6 @@ def dashboard():
         for i in range(7)
     ]
 
-    quote_home = get_frasi_motivazionali_home()
 
     return render_template('dashboard.html', 
                            title=('LIFT OFF'),
@@ -496,9 +518,8 @@ def dashboard():
                            prev_day=prev_day,
                            next_day=next_day,
                            weekdays=weekdays,
-                           quote=quote_home,
                            user=current_user,
-                           quotes=get_frasi_motivazionali())
+                           )
 
 @app.route('/dashboard/date/<int:day>/<int:month>/<int:year>', methods=['GET'])
 @login_required
@@ -524,8 +545,6 @@ def select_workout_date(day, month, year):
         for i in range(7)
     ]
 
-    quote_home = get_frasi_motivazionali_home()
-
     return render_template('dashboard.html', 
                            title=('LIFT OFF'),
                            workouts=workouts,
@@ -536,62 +555,7 @@ def select_workout_date(day, month, year):
                            prev_day=prev_day,
                            next_day=next_day,
                            weekdays=weekdays,
-                           quote=quote_home,
-                           user=current_user,
-                           quotes=get_frasi_motivazionali())
-
-
-@app.route('/workout/upload', methods=['GET', 'POST'])
-@login_required
-def upload_workout():
-    if request.method == 'POST':
-        current_user.total_workouts_added += 1
-        db.session.commit()
-
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-
-        if file and allowed_file(file.filename):
-            upload_folder_path = os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'])
-            if not os.path.exists(upload_folder_path):
-                os.makedirs(upload_folder_path)
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(os.path.abspath('.'), app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            wod = get_text_from_image_openai(filepath)
-            os.remove(filepath)
-        else:
-            wod = None
-
-        if wod:
-            try:
-                wod_date = datetime.strptime(wod.date, "%d-%m-%Y")
-            except Exception:
-                wod_date = datetime.now()
-
-            for w in wod.workouts:
-                workout = Workout(
-                    date=wod_date,
-                    name=getattr(w, 'name', None) or getattr(w, 'type', 'Workout'),
-                    description=getattr(w, 'description', None),
-                    user_id=current_user.id
-                )
-                db.session.add(workout)
-            db.session.commit()
-            flash('Workout creato dal file con successo!', 'success')
-            logger(current_user.id, 'Load screenshot workout')
-        else:
-            flash('Qualcosa ? andato storto durante il caricamento.', 'danger')
-
-        return redirect(url_for('dashboard'))
-
-    return render_template('upload.html', title=('Upload Workout'))
+                           user=current_user)
 
 
 @app.route('/workout/add', methods=['GET', 'POST'])
@@ -619,6 +583,41 @@ def add_workout():
                            form=form)
 
 
+
+@app.route('/workout/week/add', methods=['GET', 'POST'])
+@login_required
+def add_weekly_workouts():
+    form = AddWeeklyWorkoutForm()
+
+
+    if form.validate_on_submit():
+        try:
+            parsed = parse_week_text(form.week_text.data)
+            #print(parsed)
+            for w_data in parsed["workouts"]:
+                w = Workout(
+                    date=w_data["date"],
+                    name=w_data['name'],
+                    description="\n".join(w_data["description"]),
+                    user_id=current_user.id
+                )
+                db.session.add(w)
+                current_user.total_workouts_added += 1
+
+            db.session.commit()
+            flash('Workout settimanali inseriti con successo!', 'success')
+            logger(current_user.id, 'Weekly workouts created')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Errore parsing workout: {str(e)}', 'danger')
+
+    return render_template('add_weekly_workout.html',
+                           title=('Add Weekly Workouts'),
+                           user=current_user,
+                           form=form)
+
+
 @app.route('/workout/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_workout(id):
@@ -629,7 +628,7 @@ def delete_workout(id):
     db.session.commit()
     flash('Allenamento eliminato con successo.', 'success')
     logger(current_user.id, 'Deleted workout '+workout.date.strftime('%d-%m-%Y'))
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('select_workout_date', day=workout.date.day, month=workout.date.month, year=workout.date.year))
 
 
 @app.route('/workout/edit/<int:id>', methods=['GET', 'POST'])
@@ -658,31 +657,79 @@ def edit_workout(id):
                            workout=w)
 
 
-@app.route('/performance/add', methods=['GET', 'POST'])
+@app.route('/performance/add/<int:id>', methods=['GET', 'POST'])
 @login_required
-def add_performance():
+def add_performance(id):
     form = PerformanceForm()
-    # popola la select con i workout dell'utente
-    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
-    form.workout_id.choices = [(0, 'Nessun workout collegato')] + [(w.id, f"{w.date.strftime('%d/%m/%Y')} - {w.name}") for w in workouts]
+    w = Workout.query.get_or_404(id)
 
+    workout_performances = WorkoutPerformance.query.filter_by(workout_id=id).order_by(WorkoutPerformance.id.desc()).all()
     if form.validate_on_submit():
         perf = Performance(
-            date=form.date.data,
+            date= datetime.now(),
             description=form.description.data,
             user_id=current_user.id
         )
         db.session.add(perf)
-        db.session.flush()
-        if form.workout_id.data and form.workout_id.data != 0:
-            link = WorkoutPerformance(workout_id=form.workout_id.data, performance_id=perf.id)
-            db.session.add(link)
+        db.session.flush()  # Ottieni l'ID prima del commit
+        
+        link = WorkoutPerformance(workout_id=id, performance_id=perf.id)
+        db.session.add(link)
         db.session.commit()
         flash('Performance salvata con successo', 'success')
         logger(current_user.id, 'New performance added')
+        return redirect(url_for('add_performance', id=w.id))
+
+    return render_template('add_performance.html', title='Add Performance', workout=w, form=form, workout_performances=workout_performances)
+
+
+@app.route('/performance/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_performance(id):
+    perf = Performance.query.get_or_404(id)
+    if perf.user_id != current_user.id and not current_user.is_superuser:
+        abort(403)
+
+    link = WorkoutPerformance.query.filter_by(performance_id=id).first()
+    workout_id = link.workout_id if link else None
+
+    form = EditPerformanceForm()
+    if form.validate_on_submit():
+        perf.date = form.date.data or perf.date
+        perf.description = form.description.data
+        db.session.commit()
+        flash('Performance aggiornata', 'success')
+        logger(current_user.id, 'Performance updated')
+        if workout_id:
+            return redirect(url_for('add_performance', id=workout_id))
         return redirect(url_for('dashboard'))
 
-    return render_template('add_performance.html', title='Add Performance', form=form)
+    if request.method == 'GET':
+        form.date.data = perf.date
+        form.description.data = perf.description
+
+    return render_template('edit_performance.html', title='Edit Performance', form=form, workout_id=workout_id, perf_id=perf.id)
+
+
+@app.route('/performance/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_performance(id):
+    perf = Performance.query.get_or_404(id)
+    if perf.user_id != current_user.id and not current_user.is_superuser:
+        abort(403)
+
+    links = WorkoutPerformance.query.filter_by(performance_id=id).all()
+    workout_id = links[0].workout_id if links else None
+    for link in links:
+        db.session.delete(link)
+    db.session.delete(perf)
+    db.session.commit()
+    flash('Performance eliminata', 'success')
+    logger(current_user.id, 'Performance deleted')
+
+    if workout_id:
+        return redirect(url_for('add_performance', id=workout_id))
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/stats', methods=['GET', 'POST'])

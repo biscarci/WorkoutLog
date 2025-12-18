@@ -18,8 +18,10 @@
               background-color: #000;
               color: #fff;
               line-height: 1.6;
+              padding-bottom: 70px;
             }
 
+ 
             a, a:hover {
               color: #fff;
             }
@@ -31,6 +33,16 @@
               padding: 24px;
               border: 1px solid #fff;
               border-radius: 12px;
+            }
+
+            @media (max-width: 768px) {
+ 
+              .slider-botton {
+                width: 45px;
+                height: 45px;
+                padding: 0;
+                font-size: 1rem;
+              }
             }
 
             h1 {
@@ -80,7 +92,7 @@
             .exercises .note {
               color: #fff;
             }
-
+      
             .btn-add-workout,
             .btn-edit,
             .glowing-button {
@@ -135,8 +147,8 @@
             .btn-edit,
             .btn-delete,
             .btn-dialog {
-              min-width: 44px;
-              min-height: 36px;
+              width: 46px;
+              height: 36px;
               display: inline-flex;
               align-items: center;
               justify-content: center;
@@ -149,26 +161,36 @@
             }
 
             .btn-outline-primary {
+              display: flex;
+              align-items: center;      
+              justify-content: center;  
+
               background-color: #000;
               color: #fff;
               font-weight: 700;
               border: 1px solid #fff;
               border-radius: 5px;
-              padding: 10px 18px;
+
               font-size: 1rem;
               transition: all 0.2s ease;
             }
 
+            
             .btn-primary {
-              background-color: #fff;
-              color: #000;
+              display: flex;
+              align-items: center;      
+              justify-content: center;  
+
+              background-color: #000;
+              color: #fff;
               font-weight: 700;
-              border: 1px solid #000;
+              border: 1px solid #fff;
               border-radius: 5px;
-              padding: 10px 18px;
+
               font-size: 1rem;
               transition: all 0.2s ease;
             }
+
 
             .btn-primary:hover {
               background-color: #000;
@@ -304,6 +326,8 @@
               background-color: #000;
               color: #fff;
             }
+            
+           
         </style>
       {% endblock %}
     {% endblock %}

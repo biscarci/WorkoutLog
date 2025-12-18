@@ -12,7 +12,7 @@
   {% if workouts %}
   <div class="accordion" id="workoutAccordion">
     {% for workout in workouts %}
-    <div class="accordion-item">
+    <div class="accordion-item mb-2">
       <h2 class="accordion-header" id="heading{{ loop.index }}">
         <button class="accordion-button collapsed" 
                 type="button" 
@@ -20,8 +20,6 @@
                 data-bs-target="#collapse{{ loop.index }}" 
                 aria-expanded="false" 
                 aria-controls="collapse{{ loop.index }}">
-          {{ workout.date.strftime("%A").title() }} - 
-          {{ workout.date.strftime("%d %B").title() }} - 
           {{ workout.name }}
         </button>
       </h2>
@@ -31,12 +29,15 @@
            data-bs-parent="#workoutAccordion">
         <div class="accordion-body">
           {% if workout.description %}
-            <p class="note mb-0">{{ workout.description | capitalize }}</p>
+            <p class="note mb-0">{{ workout.description | nl2br}}</p>
           {% endif %}
           <hr>
           <div class="btn-toolbar" role="toolbar">
             <div class="btn-group btn-group-sm">
-              <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-edit" aria-label="Modify Workout">
+              <a  href="{{ url_for('add_performance', id=workout.id) }}" class="btn-edit" aria-label="Add Performance">
+                <i class="bi bi-graph-up-arrow"></i>
+              </a>
+              <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-edit mx-2" aria-label="Modify Workout">
                 <i class="bi bi-pencil-square"></i>
               </a>
               <form action="{{ url_for('delete_workout', id=workout.id) }}" method="post" style="display: inline;">
@@ -44,6 +45,7 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              
             </div>
           </div>
         </div>
@@ -51,65 +53,36 @@
     </div>
     {% endfor %}
   </div>
+  {% else %}
+    {% if user.is_superuser %}
+      <div class="d-flex justify-content-center align-items-center mt-5">
+        <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_workout') }}" role="button">
+          Add Workout
+        </a>
+      </div>
+       <div class="d-flex justify-content-center align-items-center mt-3">
+        <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_weekly_workouts') }}" role="button">
+          Add Weekly Workouts
+        </a>
+      </div>
+    {% else %}
+      <p class="text-center mt-5">{{ random_rest_message() }}</p>
+    {% endif %}
   {% endif %}
-  <footer>
-    <p>{{ quote }}</p>
-  </footer>
 </div>
-
-{% if user.total_workouts_added % 5 == 0 and user.total_workouts_added != 0 %}
-<div class="d-flex justify-content-center align-items-center vh-40">
-  <div class="card text-bg-dark border-warning mb-3 text-center" id="donationCard" style="max-width: 50rem;">
-    <div class="card-body">
-      <button type="button" class="btn-close btn-close-white float-end" aria-label="Close" onclick="document.getElementById('donationCard').style.display='none';"></button>
-      <p class="card-text mt-4">
-        Complimenti, stai andando alla grande! Hai inserito ben {{ user.total_workouts_added }} allenamenti. Segno che ti stai impegnando davvero!
-        Ricorda, proprio come nello sport, ogni sforzo viene sempre ripagato. 
-        Se vuoi sbloccare nuove funzionalit e supportare il mio lavoro (perchǸ, diciamocelo, anche i coach devono pur mangiare), considera di fare una piccola donazione. 
-        Insieme continueremo a raggiungere grandi obiettivi!
-        Indicami la mail nelle note e riceverai il codice per sbloccare l'app per sempre.
-      </p>
-      <a href="https://revolut.me/biscarci" target="_blank" class="btn btn-add-workout glowing-button">
-        Donate Now
-      </a>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-
-{% if user.total_workouts_added == 30 %}
-<div class="d-flex justify-content-center align-items-center vh-40">
-<div class="card text-bg-dark border-warning mb-3 text-center" style="max-width: 50rem;">
-  <div class="card-body">
-    <p class="card-text">
-      Sei una vera macchina da guerra! Y' Hai superato il limite di 30 allenamenti della versione gratuita
-       evidente che non ti fermi mai! Come nello sport, ogni bestia che si rispetti sa che gli sforzi vanno ripagati. 
-      Aiutami a mettere anche io qualcosa nel piatto (i coach hanno fame di cibo e risultati)! 
-      Fai una piccola donazione e insieme continueremo a macinare successi!
-      Indicami la mail nelle note e riceverai il codice per sbloccare l'app per sempre
-    </p>
-    <a href="https://revolut.me/biscarci" target="_blank" class="btn btn-add-workout glowing-button">
-      Donate Now
-    </a>
-  </div>
-</div>
-</div>
-{% endif %}
+<footer>
+  {% if workouts %}  
+    <p style="color: darkgrey;">{{ random_motivational_phrase() }}</p>
+  {% endif %}
+</footer>
 
 
 
 <!-- Bottom bar for adding new workouts -->
 <div class="bottom-bar">
   <div class="d-flex justify-content-center gap-2">
-    <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_workout') }}" role="button">
-      Workout
-    </a>
-    <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_performance') }}" role="button">
-      Performance
-    </a>
     <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('user_stats') }}" role="button">
-      Statistiche
+      Statistics
     </a>
   </div>
 </div>

@@ -21,9 +21,10 @@
 </div>
 
 <div class="days-slider d-flex justify-content-center align-items-center mb-4">
+  
     <div class="weekdays d-flex">
         {% for day in weekdays %}
-            <div class="d-flex flex-column align-items-center mx-3">
+            <div class="d-flex flex-column align-items-center mx-1">
                 
                 <!-- Lettera del giorno -->
                 <span class="mb-1 fw-bold">
@@ -33,12 +34,12 @@
                 <!-- Bottone giorno -->
                 {% if day == date %}
                     <a href="{{ url_for('select_workout_date', day=day.day, month=day.month, year=day.year) }}"
-                       class="btn btn-sm btn-primary">
+                       class="btn btn-sm btn-primary slider-botton">
                         {{ day.strftime("%d") }}
                     </a>
                 {% else %}
                     <a href="{{ url_for('select_workout_date', day=day.day, month=day.month, year=day.year) }}"
-                       class="btn btn-sm btn-outline-primary">
+                       class="btn btn-sm btn-outline-primary slider-botton">
                         {{ day.strftime("%d") }}
                     </a>
                 {% endif %}

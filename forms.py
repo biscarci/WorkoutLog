@@ -42,11 +42,19 @@ class UpdateWorkoutForm(WorkoutForm):
 class AddWorkoutForm(WorkoutForm):
     submit     = SubmitField('Add')
 
+
+class AddWeeklyWorkoutForm(FlaskForm):
+    week_text = TextAreaField(('Weekly Workouts Description'), validators=[DataRequired(), Length(min=10)])
+    submit = SubmitField('Add Weekly Workouts')
+
 class PerformanceForm(FlaskForm):
+    description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
+    submit = SubmitField('Add Performance')
+
+class EditPerformanceForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
-    workout_id = SelectField('Workout', coerce=int, validators=[Optional()])
-    submit = SubmitField('Add Performance')
+    submit = SubmitField('Edit Performance')
 
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)

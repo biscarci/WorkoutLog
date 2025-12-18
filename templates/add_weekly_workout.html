@@ -1,0 +1,46 @@
+{% extends "base.html" %} 
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<div class="container">   
+    <style>
+        #week_text {
+            width: 100%;
+            min-height: 500px;
+            max-height: 70vh;
+            box-sizing: border-box;
+        }
+
+    </style>
+    <div class="row">
+        <h1 class="text-center w-100 mb-4">Add Weekly Workout</h1> <!-- 'w-100' assicura che l'intestazione occupi tutta la larghezza -->
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <form method="POST" action="{{ url_for('add_weekly_workouts') }}">
+                {{ form.csrf_token() }}
+                {{ render_field(form.week_text, class_="form-control") }}
+                 <!-- Pulsante Add Workout centrale -->
+                 <div class="d-flex justify-content-center mt-4">
+                    {{ render_field(form.submit, class_="btn-add-workout") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+       
+  
+<!-- Barra in basso per aggiungere workout -->
+<div class="bottom-bar">
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}
+         
+    
+         
+    
+       
+     
+        
+       
