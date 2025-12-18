@@ -34,7 +34,7 @@ app = Flask(__name__)
 # Configurazione Flask App
 
 app.config['SECRET_KEY'] = '2c6d5c22597e8bb44dcd60f94c9d76508da64e88b550b0e215b581590ed382bb'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL') or 'sqlite:///workout.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 
