@@ -773,7 +773,6 @@ def add_performance(id):
 
     match = None
     if selected_exercise:
-        print(f"selected_exercise: '{selected_exercise}'")
         match = re.match(
             r'^(?P<name>.*?)\s*-\s*@(?P<weight>\d+(?:\.\d+)?)kg\s+(?P<reps>\d+)RM$',
             selected_exercise
@@ -783,7 +782,6 @@ def add_performance(id):
         selected_name = match.group('name')
         selected_weight = match.group('weight')
         selected_reps = match.group('reps')
-        print(f"selected_name: '{selected_name}'. selected_weight: '{selected_weight}', selected_reps: '{selected_reps}'")
         stats_exercise = UserStatistic.query.filter_by(
             user_id=current_user.id,
             exercise=selected_name,

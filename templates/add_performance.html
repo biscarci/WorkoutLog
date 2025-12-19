@@ -10,6 +10,8 @@
             max-height: 70vh;
             box-sizing: border-box;
         }
+        .rm-row { cursor: pointer; }
+        .rm-row:hover { background-color: #111; }
     </style>
   <!-- HEADER -->
  
@@ -91,7 +93,7 @@
                             <table class="table table-dark table-borderless table-sm mb-0">
                                 <tbody>
                                     {% for row in rm_percent_table[start:start+chunk_size] %}
-                                    <tr>
+                                    <tr class="rm-row" data-percent="{{ row.percent }}" data-kg="{{ row.kg }}">
                                         <td>{{ row.percent }} <small style="color:rgb(92, 92, 92); font-size: small;">%</small></td>
                                         <td class="text-end">{{ row.kg }} <small style="color:rgb(92, 92, 92);font-size: small;">kg</small></td>
                                     </tr>
@@ -236,6 +238,22 @@
         body.addEventListener('hidden.bs.collapse', () => {
             icon.classList.remove('bi-chevron-up');
             icon.classList.add('bi-chevron-down');
+        });
+    })();
+
+    (function () {
+        const descInput = document.getElementById('description');
+        if (!descInput) return;
+        document.querySelectorAll('.rm-row').forEach(function (row) {
+            row.addEventListener('click', function () {
+                const percent = row.dataset.percent;
+                const kg = row.dataset.kg;
+                if (!percent || !kg) return;
+                const snippet = `@${percent}% - ${kg}`;
+                const current = descInput.value;
+                descInput.value = current ? `${current}\n${snippet}` : snippet;
+                descInput.focus();
+            });
         });
     })();
 </script>
