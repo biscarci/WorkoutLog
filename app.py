@@ -14,7 +14,7 @@ from flask import Flask, Blueprint, abort, flash, jsonify, redirect, render_temp
 from flask.cli import with_appcontext
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
-import requests
+import requests, re
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
@@ -744,39 +744,51 @@ def add_performance(id):
     w = Workout.query.get_or_404(id)
 
     selected_exercise = (request.args.get('exercise') or '').strip()
+
     exercises_data = (
-        db.session.query(
-            UserStatistic.exercise,
-            func.max(UserStatistic.weight).label('max_weight'),
-            func.max(UserStatistic.reps).label('max_reps')
-        )
+        UserStatistic.query
         .filter_by(user_id=current_user.id)
         .filter(UserStatistic.exercise.isnot(None))
-        .group_by(UserStatistic.exercise)
-        .order_by(UserStatistic.exercise.asc())
+        .order_by(
+            UserStatistic.exercise.asc(),
+            UserStatistic.date.desc()
+        )
         .all()
     )
+
     # Costruisci la lista con il formato desiderato
     exercises = []
-    for exercise, max_weight, max_reps in exercises_data:
-        label = exercise
-        if max_weight is not None and max_reps is not None:
-            label = f"{exercise}   ({max_weight}kg {max_reps}RM)"
-        elif max_weight is not None:
-            label = f"{exercise}   ({max_weight}kg)"
-        elif max_reps is not None:
-            label = f"{exercise}   ({max_reps}RM)"
-        exercises.append(label)
+    for e in exercises_data:
+        exercises.append(f"{e.exercise} - @{e.weight}kg {e.reps}RM")
 
     stats_exercise = []
     max_weight = None
     max_reps = None
     best_1rm = None
     rm_percent_table = []
+    
+    selected_name = ''
+    selected_weight = ''
+    selected_reps = ''
+
+    match = None
     if selected_exercise:
+        print(f"selected_exercise: '{selected_exercise}'")
+        match = re.match(
+            r'^(?P<name>.*?)\s*-\s*@(?P<weight>\d+(?:\.\d+)?)kg\s+(?P<reps>\d+)RM$',
+            selected_exercise
+        )
+
+    if match:
+        selected_name = match.group('name')
+        selected_weight = match.group('weight')
+        selected_reps = match.group('reps')
+        print(f"selected_name: '{selected_name}'. selected_weight: '{selected_weight}', selected_reps: '{selected_reps}'")
         stats_exercise = UserStatistic.query.filter_by(
             user_id=current_user.id,
-            exercise=selected_exercise
+            exercise=selected_name,
+            weight=float(selected_weight),
+            reps=int(selected_reps)
         ).order_by(UserStatistic.date.desc()).limit(15).all()
 
         weights = [s.weight for s in stats_exercise if s.weight is not None]

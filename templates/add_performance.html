@@ -49,20 +49,27 @@
         </div>
         <div class="collapse show" id="exerciseStatsBody">
           <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-8 text-center text-md-start">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-8 text-center text-md-start">
                     <label for="exerciseFilter" class="form-label">Esercizio</label>
-                    <select id="exerciseFilter" class="form-select">
-                        <option value="" {% if not selected_exercise %}selected{% endif %}>Seleziona...</option>
-                        {% for ex in exercises %}
-                            <option value="{{ ex }}" {% if selected_exercise == ex %}selected{% endif %}>{{ ex }}</option>
-                        {% endfor %}
-                    </select>
+                    <form id="exerciseFilterForm" method="get" action="{{ url_for('add_performance', id=workout.id) }}">
+                        <select id="exerciseFilter" name="exercise" class="form-select" onchange="this.form.submit()">
+                            <option value="" {% if not selected_exercise %}selected{% endif %}>Seleziona...</option>
+                            {% for ex in exercises %}
+                                <option value="{{ ex }}" {% if selected_exercise == ex %}selected{% endif %}>{{ ex }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
                 </div>
              
             </div>
 
             {% if selected_exercise %}
+            <style>
+              .rm-divider {
+                  border-right: 1px solid #555; /* grigio scuro */
+              }
+            </style>
                 <hr>
                 <div class="row text-center">
                     <div class="col-6">
@@ -76,24 +83,26 @@
                 </div>
                 {% if best_1rm %}
                 <hr>
-                <div class="table-responsive">
-                    <table class="table table-dark table-borderless table-sm mb-0" style="font-size: x-small;">
-                        <thead>
-                            <tr>
-                                <th scope="col">%</th>
-                                <th scope="col" class="text-end">Kg</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in rm_percent_table %}
-                            <tr>
-                                <td>{{ row.percent }}</td>
-                                <td class="text-end">{{ row.kg }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                {% set chunk_size = (rm_percent_table|length + 1) // 2 %}
+                <div class="row g-2">
+                    {% for start in range(0, rm_percent_table|length, chunk_size) %}
+                    <div class="col-6 rm-col {% if loop.index == 1 %}rm-divider{% endif %}">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-borderless table-sm mb-0">
+                                <tbody>
+                                    {% for row in rm_percent_table[start:start+chunk_size] %}
+                                    <tr>
+                                        <td>{{ row.percent }} <small style="color:rgb(92, 92, 92); font-size: small;">%</small></td>
+                                        <td class="text-end">{{ row.kg }} <small style="color:rgb(92, 92, 92);font-size: small;">kg</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
+
                 {% endif %}
                 <hr>
                 <div class="table-responsive">
@@ -215,21 +224,6 @@
 
   
 <script>
-    (function () {
-        const select = document.getElementById('exerciseFilter');
-        if (!select) return;
-        const base = "{{ url_for('add_performance', id=workout.id) }}";
-        console.log(base);
-        select.addEventListener('change', () => {
-            const value = select.value || '';
-            if (!value) {
-                window.location.href = base;
-                return;
-            }
-            window.location.href = `${base}?exercise=${encodeURIComponent(value)}`;
-        });
-    })();
-
     (function () {
         const body = document.getElementById('exerciseStatsBody');
         const icon = document.getElementById('exerciseStatsIcon');
