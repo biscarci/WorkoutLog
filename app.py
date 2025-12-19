@@ -2,8 +2,6 @@
 # Importazioni standard della libreria Python
 import click
 import os
-import random
-import string
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -21,6 +19,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 
 # Importazioni del progetto locale
 from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
@@ -34,15 +33,30 @@ from markupsafe import Markup, escape
 
 app = Flask(__name__)
 
-# Configurazione Flask App
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL') or 'sqlite:///workout.db'
-app.config['UPLOAD_FOLDER'] = 'uploads'
+DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+if DEBUG:
+    # 🧪 sviluppo locale
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
+else:
+    # 🚀 produzione (Railway)
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL non impostata")
 
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {"sslmode": "require"}
+    }
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 login_manager.login_view = 'login'
 bootstrap = Bootstrap5(app)
 
@@ -62,6 +76,8 @@ def inject_utils():
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=True, default='')
+    surname = db.Column(db.String(150), nullable=True, default='')
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -69,9 +85,6 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_superuser = db.Column(db.Boolean, default=False)
     is_enabled = db.Column(db.Boolean, default=False)
-    unlock_code = db.Column(db.String(10), nullable=True)  # Nuovo campo
-    unlock_attempt = db.Column(db.Integer, default=0)
-    demo_mode = db.Column(db.Boolean, default=False)
     total_workouts_added = db.Column(db.Integer, default=0)
     workouts = db.relationship('Workout', backref='user', lazy=True)
     
@@ -162,39 +175,22 @@ def bootstrap_superuser_from_env():
     username = os.getenv('ADMIN_USERNAME')
     email = os.getenv('ADMIN_EMAIL')
     password = os.getenv('ADMIN_PASSWORD')
+    name = os.getenv('ADMIN_NAME')
+    surname = os.getenv('ADMIN_SURNAME')
     if not username or not email or not password:
         return
     try:
-        created = create_superuser(username=username, email=email, password=password)
+        created = create_superuser(
+            username=username,
+            email=email,
+            password=password,
+            name=name,
+            surname=surname,
+        )
         if created:
             app.logger.warning("Bootstrapped superuser '%s' from env vars", username)
     except Exception:
         app.logger.exception('Failed to bootstrap superuser from env vars')
-
-
-def start_keepalive_worker():
-    if app.config.get('_KEEPALIVE_STARTED'):
-        return
-    app.config['_KEEPALIVE_STARTED'] = True
-
-    def worker():
-        while True:
-            time.sleep(300)
-            try:
-                with app.app_context():
-                    last = Log.query.order_by(Log.timestamp.desc()).first()
-                    now = datetime.utcnow()
-                    inactive = (last is None) or ((now - last.timestamp) > timedelta(minutes=5))
-                    url = os.getenv('KEEPALIVE_URL')
-                    if inactive and url:
-                        try:
-                            requests.get(url, timeout=5)
-                        except Exception:
-                            app.logger.exception('Keepalive ping failed')
-            except Exception:
-                app.logger.exception('Keepalive worker error')
-
-    threading.Thread(target=worker, daemon=True, name="keepalive-worker").start()
 
 
 @app.before_request
@@ -205,13 +201,10 @@ def create_tables():
         except Exception:
             app.logger.exception('db.create_all failed')
         bootstrap_superuser_from_env()
-        start_keepalive_worker()
         app.config['_DB_INIT_DONE'] = True
 
     if current_user.is_authenticated:
         current_user.last_login = datetime.now(timezone.utc)
-        if current_user.total_workouts_added >= 30 and current_user.demo_mode:
-            current_user.is_enabled = False
         db.session.commit()
 
 # Gestione login
@@ -219,17 +212,18 @@ def create_tables():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def create_superuser(username, email, password):
+def create_superuser(username, email, password, name=None, surname=None):
     existing_user = User.query.filter_by(username=username).first()
     existing_superuser = User.query.filter_by(is_superuser=True).first()
     if existing_user or existing_superuser:
         return False
     su = User(
+        name=name or username,
+        surname=surname or '',
         username=username, 
         email=email, 
         is_superuser=True,
         is_enabled = True,
-        demo_mode = False
     )
     su.set_password(password)
     db.session.add(su)
@@ -241,10 +235,12 @@ def create_superuser(username, email, password):
 @click.option('--username', prompt=True)
 @click.option('--email', prompt=True)
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True)
+@click.option('--name', prompt=False, required=False, default=None)
+@click.option('--surname', prompt=False, required=False, default=None)
 @with_appcontext
-def create_superuser_command(username, email, password):
+def create_superuser_command(username, email, password, name, surname):
     """Create a new superuser"""
-    if create_superuser(username, email, password):
+    if create_superuser(username, email, password, name=name, surname=surname):
         click.echo('Superuser created successfully!')
     else:
         click.echo('Error: Superuser creation failed.')
@@ -259,6 +255,8 @@ def admin_dashboard():
     # Check if user is a superuser
     if not current_user.is_superuser:
         abort(403)  # Forbidden access
+
+    log_date_str = request.args.get('log_date', '') or ''
     
     # User Statistics
     total_users = User.query.count()
@@ -279,8 +277,18 @@ def admin_dashboard():
         db.text('type_count DESC')
     ).first()[0] if total_workouts > 0 else 'N/A'
 
-    # Recent User Activities (hypothetical - you'll need to implement an ActivityLog model)
-    recent_activities = Log.query.order_by(Log.timestamp.asc()).all()
+    # Recent User Activities filtered by selected day if provided
+    log_query = Log.query
+    if log_date_str:
+        try:
+            selected_date = datetime.strptime(log_date_str, "%Y-%m-%d").date()
+            start_dt = datetime.combine(selected_date, datetime.min.time())
+            end_dt = start_dt + timedelta(days=1)
+            log_query = log_query.filter(Log.timestamp >= start_dt, Log.timestamp < end_dt)
+        except ValueError:
+            log_date_str = ''
+
+    recent_activities = log_query.order_by(Log.timestamp.asc()).all()
 
     # System Status (these would be actual system metrics)
     db_connections = 10  # Example placeholder
@@ -300,7 +308,8 @@ def admin_dashboard():
         recent_activities=recent_activities,
         db_connections=db_connections,
         server_uptime=server_uptime,
-        last_backup=last_backup
+        last_backup=last_backup,
+        log_date=log_date_str,
     )
 
 
@@ -316,8 +325,7 @@ def admin_users():
     # Prepara i dati per il template
     for user in users:
         user.toggle_icon = "bi bi-toggle-on text-primary" if user.is_enabled else "bi bi-toggle-off text-secondary"
-        user.demo_toggle_icon = "bi bi-toggle-on text-primary" if user.demo_mode else "bi bi-toggle-off text-secondary"
-
+        
     return render_template(
         'admin_users.html', 
         title='Admin Users List',
@@ -331,23 +339,11 @@ def manage_user(id):
     """Pagina HTML per abilitare un utente."""
     user = User.query.get_or_404(id)
     user.is_enabled = not user.is_enabled
-    user.unlock_attempt = 0
     db.session.commit()
     flash(f"User {user.username} {'abilitato' if user.is_enabled else 'disabilitato' } con successo.", "success")
     logger(current_user.id, f"User: {user.username} {'enabled' if user.is_enabled else 'disabled' }")
     return redirect(url_for('admin_users'))
 
-@app.route('/admin/demo_user/<int:id>', methods=['POST'])
-@login_required
-@superuser_required
-def demo_mode_user(id):
-    """Pagina HTML per abilitare un utente."""
-    user = User.query.get_or_404(id)
-    user.demo_mode = not user.demo_mode
-    db.session.commit()
-    flash(f"Demo mode user: {user.username} {'abilitata' if user.demo_mode else 'non abilitata' } ", "success")
-    logger(current_user.id, f"User {user.username} {'enabled' if user.is_enabled else 'disabled' }")
-    return redirect(url_for('admin_users'))
 
 @app.route('/admin/delete_user/<int:id>', methods=['POST'])
 @login_required
@@ -379,22 +375,20 @@ def delete_user(id):
     return redirect(url_for('admin_users'))
 
 
-@app.route('/admin/generate_unlock_code/<int:id>', methods=['POST'])
+@app.route('/admin/reset_password/<int:id>', methods=['POST'])
 @login_required
 @superuser_required
-def generate_unlock_code(id):
-    """API per generare un codice di sblocco per un utente."""
+def reset_user_password(id):
+    """Reset user password to default for admin use."""
     user = User.query.get_or_404(id)
-    # Genera un codice di sblocco casuale
-    characters = string.ascii_uppercase + string.ascii_lowercase + string.digits + "!@#$%^&*()-_=+[]{}<>"
-    unlock_code = ''.join(random.choices(characters, k=8))
+    if user.is_superuser:
+        flash("Non puoi resettare la password di un admin.", "warning")
+        return redirect(url_for('admin_users'))
 
-    user.unlock_code = unlock_code
-    user.is_enabled = False
-    user.unlock_attempt = 0
+    user.password = generate_password_hash('seiunpollo')
     db.session.commit()
-    flash(f'Generated unlock key for {user.username}', "success")
-    logger(current_user.id, f'Generated unlock key for {user.username}')
+    flash(f"Password resettata per {user.username}.", "info")
+    logger(current_user.id, f"Reset password for {user.username}")
     return redirect(url_for('admin_users'))
 
 
@@ -422,11 +416,12 @@ def register():
 
         # Create and save the new user
         new_user = User(
+            name=form.name.data,
+            surname=form.surname.data,
             username=form.username.data,
             email=form.email.data,
             is_superuser=False,
             is_enabled=True,
-            demo_mode=True
         )
         new_user.set_password(form.password.data)
         db.session.add(new_user)
@@ -467,11 +462,12 @@ def register_admin():
             return redirect(url_for('register_admin'))
 
         new_admin = User(
+            name=form.name.data,
+            surname=form.surname.data,
             username=form.username.data,
             email=form.email.data,
             is_superuser=True,
             is_enabled=True,
-            demo_mode=False,
         )
         new_admin.set_password(form.password.data)
         db.session.add(new_admin)
@@ -535,23 +531,9 @@ def profile():
     form = UpdateProfileForm()
 
     if form.validate_on_submit():
-        # Gestione del codice di sblocco
-        if form.unlock_code.data:
-            if user.unlock_attempt >= 10:
-                flash('Il tuo profilo è bloccato a causa di troppi tentativi.', 'danger')
-            elif user.unlock_code == form.unlock_code.data:
-                user.is_enabled = True
-                user.unlock_code = None  # Resetta il codice dopo l'uso
-                user.unlock_attempt = 0  # Resetta i tentativi
-                user.demo_mode = False
-                db.session.commit()
-                flash('Il tuo profilo è stato sbloccato con successo!', 'success')
-            else:
-                user.unlock_attempt += 1
-                db.session.commit()
-                flash('Codice di sblocco non valido. Riprova.', 'warning')
-
         # Aggiornamento delle informazioni del profilo
+        user.name = form.name.data
+        user.surname = form.surname.data
         user.username = form.username.data
         user.email = form.email.data
         if form.password.data:
@@ -563,6 +545,8 @@ def profile():
 
     elif request.method == 'GET':
         # Precompila il form con i dati dell'utente
+        form.name.data = user.name
+        form.surname.data = user.surname
         form.username.data = user.username
         form.email.data = user.email
 
@@ -627,8 +611,7 @@ def select_workout_date(day, month, year):
         start_date = datetime(year, month, 1)
     end_date = start_date + timedelta(days=1)
 
-    owner = current_user
-    workouts = Workout.query.filter_by(user_id=owner.id).filter(
+    workouts = Workout.query.filter(
         Workout.date >= start_date, Workout.date < end_date
     ).order_by(Workout.date.asc()).all()
 
@@ -761,15 +744,29 @@ def add_performance(id):
     w = Workout.query.get_or_404(id)
 
     selected_exercise = (request.args.get('exercise') or '').strip()
-    exercises = [
-        row[0]
-        for row in db.session.query(UserStatistic.exercise)
+    exercises_data = (
+        db.session.query(
+            UserStatistic.exercise,
+            func.max(UserStatistic.weight).label('max_weight'),
+            func.max(UserStatistic.reps).label('max_reps')
+        )
         .filter_by(user_id=current_user.id)
         .filter(UserStatistic.exercise.isnot(None))
-        .distinct()
+        .group_by(UserStatistic.exercise)
         .order_by(UserStatistic.exercise.asc())
         .all()
-    ]
+    )
+    # Costruisci la lista con il formato desiderato
+    exercises = []
+    for exercise, max_weight, max_reps in exercises_data:
+        label = exercise
+        if max_weight is not None and max_reps is not None:
+            label = f"{exercise}   ({max_weight}kg {max_reps}RM)"
+        elif max_weight is not None:
+            label = f"{exercise}   ({max_weight}kg)"
+        elif max_reps is not None:
+            label = f"{exercise}   ({max_reps}RM)"
+        exercises.append(label)
 
     stats_exercise = []
     max_weight = None
@@ -818,7 +815,7 @@ def add_performance(id):
         perf_date = datetime.combine(form.date.data, datetime.min.time()) if form.date.data else datetime.now()
         perf = Performance(
             date=perf_date,
-            description=form.description.data,
+            description=form.description.data.capitalize(),
             user_id=current_user.id
         )
         db.session.add(perf)

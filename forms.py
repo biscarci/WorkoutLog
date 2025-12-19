@@ -8,20 +8,24 @@ from datetime import datetime
 
 # Form di registrazione
 class RegistrationForm(FlaskForm):
+    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Length(min=2, max=200)])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('Registrati')
+    submit = SubmitField('Invia')
 
 
 class AdminRegistrationForm(FlaskForm):
+    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(min=2, max=200)])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
     admin_code = StringField('Codice Admin', validators=[DataRequired(), Length(min=1, max=50)])
-    submit = SubmitField('Registrati')
+    submit = SubmitField('Invia')
 
 
 
@@ -31,10 +35,6 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
-# Form per il caricamento dell'immagine
-class UploadForm(FlaskForm):
-    image = FileField('Carica un\'immagine', validators=[DataRequired(), FileAllowed(['jpg', 'png', 'jpeg'], 'Solo immagini!')])
-    submit = SubmitField('Carica e Processa')
 
 # Form per Workout
 class WorkoutForm(FlaskForm):
@@ -54,24 +54,24 @@ class AddWorkoutForm(WorkoutForm):
 
 class AddWeeklyWorkoutForm(FlaskForm):
     week_text = TextAreaField(('Weekly Workouts Description'), validators=[DataRequired(), Length(min=10)])
-    submit = SubmitField('Add Weekly Workouts')
+    submit = SubmitField('Importa')
 
 class PerformanceForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
-    submit = SubmitField('Add Performance')
+    submit = SubmitField('Add')
 
 class EditPerformanceForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
-    submit = SubmitField('Edit Performance')
+    submit = SubmitField('Edit')
 
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     exercise = StringField('Exercise', validators=[DataRequired(), Length(min=2, max=150)])
     weight = FloatField('Weight (Kg)', validators=[Optional()])
     reps = IntegerField('Reps', validators=[Optional()])
-    submit = SubmitField('Save Stats')
+    submit = SubmitField('Save')
 
 
 class BulkDeleteStatsForm(FlaskForm):
@@ -79,10 +79,11 @@ class BulkDeleteStatsForm(FlaskForm):
 
 
 class UpdateProfileForm(FlaskForm):
+    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Nuova Password', validators=[Optional()])
     confirm_password = PasswordField('Conferma Password', validators=[Optional(), EqualTo('password')])
-    unlock_code = StringField('Unlock Profile', validators=[Optional()])
 
-    submit = SubmitField('Aggiorna Profilo')
+    submit = SubmitField('Aggiorna')

@@ -12,9 +12,7 @@
         }
     </style>
   <!-- HEADER -->
-  <div class="text-center mb-4">
-    <h3 class="fw-bold">Add Performance</h3>
-  </div>
+ 
 
   <!-- WORKOUT CARD -->
   <div class="card shadow-sm mb-4">
@@ -31,25 +29,28 @@
 
   
   <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #000; border-bottom: 1px solid #fff;">
-            <h3 class="mb-0">Statistiche per esercizio</h3>
+        <div class="card-header position-relative text-center"
+            style="background-color:#000; border-bottom:1px solid #fff;">
+            
+            <h4 class="mb-0 fw-bold">I tuoi massimali</h4>
+
             <button
               id="toggleExerciseStats"
               type="button"
-              class="btn btn-dialog"
+              class="btn btn-dialog position-absolute top-50 end-0 translate-middle-y me-2"
               data-bs-toggle="collapse"
               data-bs-target="#exerciseStatsBody"
-              aria-expanded="true"
+              aria-expanded="false"
               aria-controls="exerciseStatsBody"
               aria-label="Chiudi/Apri"
             >
-              <i class="bi bi-chevron-up" id="exerciseStatsIcon"></i>
+              <i class="bi bi-chevron-down" id="exerciseStatsIcon"></i>
             </button>
         </div>
         <div class="collapse show" id="exerciseStatsBody">
           <div class="card-body">
             <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-8">
+                <div class="col-12 col-md-8 text-center text-md-start">
                     <label for="exerciseFilter" class="form-label">Esercizio</label>
                     <select id="exerciseFilter" class="form-select">
                         <option value="" {% if not selected_exercise %}selected{% endif %}>Seleziona...</option>
@@ -125,17 +126,20 @@
 
 
   <!-- FORM CARD -->
-  <div class="row justify-content-center mb-4">
+  <div class="row justify-content-center text-center mb-4">
     <div class="col">
       <div class="card shadow-sm">
         <div class="card-body">
+           <div class="card-title text-center fw-semibold mb-2">
+              <h4 class="fw-bold">Add Performance</h4>
+            </div>
           <form method="POST" action="{{ url_for('add_performance', id=workout.id) }}">
             {{ form.csrf_token() }}
 
             {{ render_field(form.date, class_="form-control") }}
             {{ render_field(form.description, class_="form-control") }}
 
-            <div class="d-grid mt-4">
+            <div class="d-grid justify-content-center mt-4">
               {{ render_field(form.submit)}}
             </div>
           </form>
@@ -215,6 +219,7 @@
         const select = document.getElementById('exerciseFilter');
         if (!select) return;
         const base = "{{ url_for('add_performance', id=workout.id) }}";
+        console.log(base);
         select.addEventListener('change', () => {
             const value = select.value || '';
             if (!value) {

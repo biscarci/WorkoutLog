@@ -1,21 +1,10 @@
-
-{% extends "base.html" %} 
-
-<style>
-    .unlock-code {
-        cursor: pointer;
-        color: #fff; /* Cambia colore se necessario */
-        text-decoration: underline; /* Indica che è interattivo */
-    }
-    .unlock-code:hover {
-        color: #fff; /* Colore al passaggio del mouse */
-    }
-</style>
+{% extends "base.html" %}
 
 {% block content %}
     <style>
         td  {font-size: small;}
         th  {font-size: medium;}
+        .user-row { cursor: pointer; }
     </style>
     <div class="container">
         <h1 class="text-center">{{title}}</h1>
@@ -27,24 +16,16 @@
                         <thead>
                         <tr>
                             <th> Username </th>
-                            <th> Email  </th>
-                            <th> Last login </th>
-                            <th> Created at </th>
                             <th> Enabled </th>
-                            <th> Key </th>
-                            <th> Demo  Mode </th>
-                            <th> Delete </th>
+                            <th> Reset pwd </th>
+                            <th> Remove </th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for u in users %}
                         {% if not u.is_superuser%}
-                        <tr class="align-middle">
-                            <td> {{u.username }}</td>
-                            <td> {{u.email }}</td>
-                            <td>{% if u.last_login %} {{ u.last_login.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</td>
-                            <td>{% if u.created_at %} {{ u.created_at.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</td>
-                            
+                        <tr class="align-middle user-row" data-target="details-{{ u.id }}">
+                            <td> {{ u.username }}</td>
                             <td>
                                 <form action="{{ url_for('manage_user', id=u.id) }}" method="post" style="display: inline;">
                                     <button type="submit" aria-expanded="false" aria-label="Abilita/Disabilita utente" class="btn btn-link">
@@ -52,21 +33,11 @@
                                     </button>
                                 </form>
                             </td>
-                            <td>
-                                <span class="unlock-code" onclick="copyToClipboard('{{ u.unlock_code }}')">
-                                    {{ u.unlock_code }}
-                                </span>
-                                <form action="{{ url_for('generate_unlock_code', id=u.id) }}" method="post" style="display: inline;">
-                                    <button type="submit" aria-expanded="false" aria-label="key utente" class="btn btn-link text-warning">
-                                         <i class="bi bi-arrow-clockwise"></i>
-                                    </button>
-                                </form>
-                            </td>
 
                             <td>
-                                <form action="{{ url_for('demo_mode_user', id=u.id) }}" method="post" style="display: inline;">
-                                    <button type="submit" aria-expanded="false" aria-label="Abilita/Disabilita demo utente" class="btn btn-link">
-                                        <i class="{{ u.demo_toggle_icon }}"></i>
+                                <form action="{{ url_for('reset_user_password', id=u.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" aria-expanded="false" aria-label="Reset password utente" class="btn btn-link">
+                                        <i class="bi bi-arrow-counterclockwise text-warning"></i>
                                     </button>
                                 </form>
                             </td>
@@ -78,10 +49,22 @@
                                     </button>
                                 </form>
                             </td>
-
-
-
-                            
+                        </tr>
+                        <tr id="details-{{ u.id }}" class="details-row d-none">
+                            <td colspan="4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Nome:</strong> {{ u.name or '-' }}</p>
+                                        <p class="mb-1"><strong>Cognome:</strong> {{ u.surname or '-' }}</p>
+                                        <p class="mb-1"><strong>Email:</strong> {{ u.email or '-' }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Last access:</strong> {% if u.last_login %} {{ u.last_login.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</p>
+                                        <p class="mb-1"><strong>Created at:</strong> {% if u.created_at %} {{ u.created_at.strftime("%d/%m/%Y %H:%m") }} {% else %} None {% endif %}</p>
+                                        <p class="mb-1"><strong>Enabled:</strong> {{ 'Yes' if u.is_enabled else 'No' }}</p>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         {% endif %}
                         {% endfor %}
@@ -97,18 +80,25 @@
     </div>
 
 <script>
-    // Funzione per copiare il codice nella clipboard
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(function() {
-            console.log('Codice copiato nella clipboard: ' + text); // Facoltativo: mostra un messaggio di conferma
-        }).catch(function(error) {
-            console.log('Errore nel copiare il codice: ' + error);
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.user-row').forEach(function (row) {
+            row.addEventListener('click', function (e) {
+                // evita toggle quando si clicca su pulsanti/link
+                if (e.target.closest('form') || e.target.closest('button') || e.target.closest('a')) {
+                    return;
+                }
+                const targetId = row.getAttribute('data-target');
+                const detailRow = document.getElementById(targetId);
+                if (detailRow) {
+                    detailRow.classList.toggle('d-none');
+                }
+            });
         });
-    }
+    });
 </script>
 
 <!-- Barra in basso per aggiungere workout -->
 <div class="bottom-bar">
-    <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+    <a class="btn btn-outline-primary btn-block" href="{{ url_for('admin_dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
 </div>
 {% endblock %}

@@ -4,21 +4,30 @@
 
 {% block content %}
 <div class="container text-center">
-   <style>
-        input, a {
-            width: 100px;
+       <style>
+        .btn, input[type="submit"] {
+            width: 100px!important;
+            width: auto;  /* Imposta la larghezza automatica */
+            display: inline-block;  /* Permette di centrare gli elementi */
+        }
+
+        .form-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
     </style>
   <h1 class="text-center">Registrati</h1>
   <form method="POST" action="{{ url_for('register') }}">
     {{ form.csrf_token() }}
-    {{ render_form(form, button_map={'submit':'add-workout'}) }}
+    {{ render_form(form, button_map={'submit':'outline-primary'}) }}
   </form>
   <hr>
   <div class="row">
     <div class="col-12 text-center">
       <p>Già registrato? Effettua il login!</p>
-      <a href="{{ url_for('login') }}" class="btn btn-add-workout btn-block mt-1">Login</a>
+      <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-block mt-1">Login</a>
     </div>
   </div>
 </div>

@@ -7,14 +7,19 @@
   <div class="row justify-content-center">
     <div class="col-12 col-md-6 col-lg-4">
       <div class="d-grid gap-3">
-        <a class="btn btn-add-workout" href="{{ url_for('profile') }}" role="button">
-          Profilo
+        {% if current_user.is_authenticated and current_user.is_superuser %}
+        <a class="btn btn-outline-primary" href="{{ url_for('admin_dashboard') }}" role="button">
+          I'M THE COACH
         </a>
-        <a class="btn btn-add-workout" href="{{ url_for('user_stats') }}" role="button">
-          Statistiche
+        {% endif %}
+        <a class="btn btn-outline-primary" href="{{ url_for('profile') }}" role="button">
+          PROFILO
+        </a>
+        <a class="btn btn-outline-primary" href="{{ url_for('user_stats') }}" role="button">
+          STATISTICS
         </a>
         <a class="btn btn-back" href="{{ url_for('logout') }}" role="button">
-          Logout
+          LOGOUT
         </a>
       </div>
     </div>
@@ -25,4 +30,3 @@
   <a class="btn btn-add-workout btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
 </div>
 {% endblock %}
-

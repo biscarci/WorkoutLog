@@ -4,12 +4,17 @@
 
 <div class="container">
    <a href="{{ url_for('dashboard') }}" style="text-decoration: none;">
-      <h1>{{ title }}</h1>
+      <h1>
+        <img src="{{ url_for('static', filename='logo_christmas.png') }}" alt="{{ title }}" class="brand-logo">
+      </h1>
     </a>
 
   {% include "month_slider.html" %}
   
-  {% if workouts %}
+ 
+  {% if not current_user.is_enabled %}
+    <p class="text-center mt-5">Atleta non abilitato</p>
+  {% elif workouts %}
   <div class="accordion" id="workoutAccordion">
     {% for workout in workouts %}
     <div class="accordion-item mb-2">
@@ -34,10 +39,11 @@
           <hr>
           <div class="btn-toolbar" role="toolbar">
             <div class="btn-group btn-group-sm">
-              <a  href="{{ url_for('add_performance', id=workout.id) }}" class="btn-edit" aria-label="Add Performance">
+              <a  href="{{ url_for('add_performance', id=workout.id) }}" class="btn-action" aria-label="Add Performance">
                 <i class="bi bi-graph-up-arrow"></i>
               </a>
-              <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-edit mx-2" aria-label="Modify Workout">
+              {% if user.is_superuser %}
+              <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-action mx-2" aria-label="Modify Workout">
                 <i class="bi bi-pencil-square"></i>
               </a>
               <form action="{{ url_for('delete_workout', id=workout.id) }}" method="post" style="display: inline;">
@@ -45,6 +51,7 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              {% endif %}
               
             </div>
           </div>
@@ -55,13 +62,13 @@
   </div>
   {% else %}
     {% if user.is_superuser %}
-      <div class="d-flex justify-content-center align-items-center mt-5">
-        <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_workout') }}" role="button">
+      <div id="workout-day"class="d-flex justify-content-center align-items-center mt-5">
+        <a class="btn btn-outline-primary" style="min-width: 110px;" href="{{ url_for('add_workout') }}" role="button">
           Add Workout
         </a>
       </div>
-       <div class="d-flex justify-content-center align-items-center mt-3">
-        <a class="btn btn-add-workout" style="min-width: 110px;" href="{{ url_for('add_weekly_workouts') }}" role="button">
+       <div id="workout-week"class="d-flex justify-content-center align-items-center mt-3">
+        <a class="btn btn-outline-primary" style="min-width: 110px;" href="{{ url_for('add_weekly_workouts') }}" role="button">
           Add Weekly Workouts
         </a>
       </div>
