@@ -3,17 +3,22 @@
 {% from 'bootstrap5/form.html' import render_form %}
 
 {% block content %}
-<div class="container">
+<div class="container text-center">
+   <style>
+        input, a {
+            width: 100px;
+        }
+    </style>
   <h1 class="text-center">Registrati</h1>
   <form method="POST" action="{{ url_for('register') }}">
     {{ form.csrf_token() }}
-    {{ render_form(form) }}
+    {{ render_form(form, button_map={'submit':'add-workout'}) }}
   </form>
   <hr>
   <div class="row">
     <div class="col-12 text-center">
       <p>Già registrato? Effettua il login!</p>
-      <a href="{{ url_for('login') }}" class="btn btn-edit btn-block mt-1">Login</a>
+      <a href="{{ url_for('login') }}" class="btn btn-add-workout btn-block mt-1">Login</a>
     </div>
   </div>
 </div>

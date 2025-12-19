@@ -3,10 +3,11 @@
 
 {% block content %}
 <div class="container">
-  <h1 class="text-center">Crea Admin</h1>
+  <h1 class="text-center">Registrazione Coach</h1>
   <form method="POST" action="{{ url_for('register_admin') }}">
-    {{ form.csrf_token() }}
-    {{ render_form(form, button_map={'submit':'edit'}) }}
+    {{ form.csrf_token() }}   
+    {{ render_form(form, button_map={'submit':'add-workout'}) }}
+
   </form>
   <hr>
   <div class="row">

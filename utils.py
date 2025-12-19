@@ -12,11 +12,14 @@ def allowed_file(filename):
 
 
 def random_motivational_phrase():
-    array = [
+    common_phrases = [
+        "SÌ VOLA",
         "LE COSE VANNO BENE ",
         "FAJ PAUR 🤌🏽",
         "PAZZESCO ! ",
         "TUTTO NELLA SERENITÀ",
+    ]
+    other_phrases = [
         "RESPIRA DOPO.",
         "MUOVITI.",
         "NON MOLLARE.",
@@ -103,8 +106,12 @@ def random_motivational_phrase():
         "FINISCI. POI COLLASSA."
     ]
 
-    index = random.randint(1, len(array)-1)
-    return array[index]
+    index = random.randint(0, len(other_phrases)-1)
+    common_phrases_index = random.randint(0, len(common_phrases)-1)
+
+    phrase = common_phrases[common_phrases_index] if random.randint(0, 1) else other_phrases[index]
+
+    return phrase
 
  
 def random_rest_message():

@@ -21,7 +21,7 @@ class AdminRegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
     admin_code = StringField('Codice Admin', validators=[DataRequired(), Length(min=1, max=50)])
-    submit = SubmitField('Crea Admin')
+    submit = SubmitField('Registrati')
 
 
 

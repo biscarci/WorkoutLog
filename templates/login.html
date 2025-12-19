@@ -3,13 +3,17 @@
 
 {% block content %}
 <div class="container text-center">
+    <style>
+        input, a {
+            width: 100px;
+        }
+    </style>
     <h1 class="text-center">Login</h1>
     <form method="POST" action="{{ url_for('login') }}">
         {{ form.csrf_token() }}
-        {{ render_form(form) }}
+        {{ render_form(form, button_map={'submit':'add-workout'}) }}
     </form>
     <a href="{{ url_for('register') }}" class="btn btn-add-workout btn-block mt-3">Registrati</a>
 </div>
 {% endblock %}
-
 
