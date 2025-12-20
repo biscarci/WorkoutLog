@@ -1,7 +1,7 @@
 {
-    "name": "LIFT OFF",
-    "short_name": "LIFT OFF",
-    "description": "LIFT OFF - JUST TRAINING",
+    "name": "LIFTOFF",
+    "short_name": "LIFTOFF",
+    "description": "LIFTOFF - JUST TRAINING",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

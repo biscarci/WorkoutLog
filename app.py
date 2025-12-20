@@ -577,8 +577,17 @@ def profile():
         # Aggiornamento delle informazioni del profilo
         user.name = form.name.data
         user.surname = form.surname.data
+        
         user.username = form.username.data
+        if User.query.filter(User.username == form.username.data, User.id != user.id).first():
+            flash('Username already taken by another account.', 'danger')
+            return redirect(url_for('profile'))
+        
         user.email = form.email.data
+        if User.query.filter(User.email == form.email.data, User.id != user.id).first():
+            flash('Email already in use by another account.', 'danger')
+            return redirect(url_for('profile'))
+
         if form.password.data:
             user.password = generate_password_hash(form.password.data)
         db.session.commit()

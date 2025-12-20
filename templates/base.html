@@ -11,11 +11,10 @@
       <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/android-icon-512.png') }}">
       <meta name="theme-color" content="#ffffff">
       <!-- Icona su iPhone (Safari iOS) -->
-      <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-icon-180.png') }}">
       <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icons/apple-icon-512.png') }}">
       <meta name="apple-mobile-web-app-capable" content="yes">
       <meta name="apple-mobile-web-app-status-bar-style" content="default">
-      <meta name="apple-mobile-web-app-title" content="LIFT OFF">
+      <meta name="apple-mobile-web-app-title" content="LIFTOFF">
 
       {% block styles %}
         <!-- Bootstrap CSS -->
@@ -405,7 +404,6 @@
     <script>
       let deferredPrompt = null;
 
-      // Rileva iOS (iPhone/iPad/iPod) e Safari stand‑alone
       function isIos() {
         const ua = window.navigator.userAgent.toLowerCase();
         return /iphone|ipad|ipod/.test(ua);
@@ -416,20 +414,28 @@
               (window.navigator.standalone === true);
       }
 
+      function hideBannerAfterDelay() {
+        const banner = document.getElementById('install-banner');
+        // Nasconde dopo 10 secondi (10000 ms)
+        setTimeout(() => {
+          banner.style.display = 'none';
+        }, 10000);
+      }
+
       window.addEventListener('load', () => {
         const banner = document.getElementById('install-banner');
         const textEl = document.getElementById('install-text');
         const button = document.getElementById('install-button');
 
-        // Caso iOS: niente prompt, solo istruzioni
+        // iOS: solo istruzioni, niente bottone
         if (isIos() && !isInStandaloneMode()) {
           banner.style.display = 'block';
           textEl.textContent = 'Per installare LIFT OFF sul tuo iPhone: apri il menu Condividi e seleziona "Aggiungi a Home".';
-          // Nessun bottone, perché iOS non espone un evento di installazione PWA
+          hideBannerAfterDelay();
           return;
         }
 
-        // Caso Android / desktop Chrome: usa beforeinstallprompt se disponibile
+        // Android / desktop: usa beforeinstallprompt
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
           deferredPrompt = e;
@@ -437,6 +443,8 @@
           banner.style.display = 'block';
           textEl.textContent = 'Installa LIFT OFF come app sul tuo dispositivo.';
           button.style.display = 'inline-block';
+
+          hideBannerAfterDelay();
 
           button.addEventListener('click', async () => {
             if (!deferredPrompt) return;
@@ -450,6 +458,7 @@
         });
       });
     </script>
+
 
     
 
