@@ -29,6 +29,7 @@ from utils import (allowed_file,
 
 
 from markupsafe import Markup, escape
+from flask_migrate import Migrate
 
 
 app = Flask(__name__)
@@ -55,6 +56,7 @@ else:
         "connect_args": {"sslmode": "require"}
     }
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)  # Aggiungi questa riga
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
