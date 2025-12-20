@@ -1,7 +1,7 @@
 {
-    "name": "Liftoff",
-    "short_name": "LiftOff",
-    "description": "Applicazione per tracciare e registrare gli allenamenti",
+    "name": "LIFT OFF",
+    "short_name": "LIFT OFF",
+    "description": "LIFT OFF - JUST TRAINING",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

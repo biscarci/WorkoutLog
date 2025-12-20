@@ -896,11 +896,22 @@ def edit_performance(id):
 def delete_performance(id):
     perf = Performance.query.get_or_404(id)
 
-    if perf.user_id != current_user.id and not current_user.is_superuser:
-        abort(403)
-
     links = WorkoutPerformance.query.filter_by(performance_id=id).all()
     workout_id = links[0].workout_id if links else None
+
+    # Allow delete if owner of the performance, superuser, or owner of the linked workout
+    workout_owner_id = None
+    if workout_id:
+        linked_workout = Workout.query.get(workout_id)
+        workout_owner_id = linked_workout.user_id if linked_workout else None
+
+    if not (
+        perf.user_id == current_user.id
+        or current_user.is_superuser
+        or (workout_owner_id is not None and workout_owner_id == current_user.id)
+    ):
+        abort(403)
+
     for link in links:
         db.session.delete(link)
     db.session.delete(perf)

@@ -11,10 +11,10 @@
       <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/android-icon-512.png') }}">
       <meta name="theme-color" content="#ffffff">
       <!-- Icona su iPhone (Safari iOS) -->
-      <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-icon-180.png') }}">
+      <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-icon-180.png') }}">
       <meta name="apple-mobile-web-app-capable" content="yes">
       <meta name="apple-mobile-web-app-status-bar-style" content="default">
-      <meta name="apple-mobile-web-app-title" content="La Mia App">
+      <meta name="apple-mobile-web-app-title" content="LIFT OFF">
 
       {% block styles %}
         <!-- Bootstrap CSS -->
@@ -392,6 +392,65 @@
         </div>
       {% endfor %}
     </div>
+
+    <div id="install-banner" style="display:none; padding:10px; background:#222; color:#fff; font-size:14px;">
+      <span id="install-text"></span>
+      <button id="install-button"
+              style="margin-left:10px; padding:5px 10px; border:none; background:#4caf50; color:#fff; border-radius:4px; cursor:pointer; display:none;">
+        Installa
+      </button>
+    </div>
+
+    <script>
+      let deferredPrompt = null;
+
+      // Rileva iOS (iPhone/iPad/iPod) e Safari stand‑alone
+      function isIos() {
+        const ua = window.navigator.userAgent.toLowerCase();
+        return /iphone|ipad|ipod/.test(ua);
+      }
+
+      function isInStandaloneMode() {
+        return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+              (window.navigator.standalone === true);
+      }
+
+      window.addEventListener('load', () => {
+        const banner = document.getElementById('install-banner');
+        const textEl = document.getElementById('install-text');
+        const button = document.getElementById('install-button');
+
+        // Caso iOS: niente prompt, solo istruzioni
+        if (isIos() && !isInStandaloneMode()) {
+          banner.style.display = 'block';
+          textEl.textContent = 'Per installare LIFT OFF sul tuo iPhone: apri il menu Condividi e seleziona "Aggiungi a Home".';
+          // Nessun bottone, perché iOS non espone un evento di installazione PWA
+          return;
+        }
+
+        // Caso Android / desktop Chrome: usa beforeinstallprompt se disponibile
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+
+          banner.style.display = 'block';
+          textEl.textContent = 'Installa LIFT OFF come app sul tuo dispositivo.';
+          button.style.display = 'inline-block';
+
+          button.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+
+            banner.style.display = 'none';
+          }, { once: true });
+        });
+      });
+    </script>
+
+    
 
   <script>
     setTimeout(function() {

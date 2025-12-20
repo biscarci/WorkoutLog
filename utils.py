@@ -18,6 +18,8 @@ def random_motivational_phrase():
         "FAJ PAUR 🤌🏽",
         "PAZZESCO ! ",
         "TUTTO NELLA SERENITÀ",
+        "NON SENTO NIENTE",
+        "SIOUUP"
     ]
     other_phrases = [
         "RESPIRA DOPO.",
