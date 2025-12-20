@@ -73,16 +73,16 @@
           Add Weekly Workouts
         </a>
       </div>
-      <p class="text-center mt-5" style="color: darkgrey;">{{ random_rest_message() }}</p>
-
-    {% else %}
-      <p class="text-center mt-5" style="color: darkgrey;">{{ random_rest_message() }}</p>
     {% endif %}
   {% endif %}
 </div>
+
+
 <footer>
   {% if workouts %}  
     <p style="color: darkgrey;">{{ random_motivational_phrase() }}</p>
+  {% else %}
+    <p style="color: darkgrey;">{{ random_rest_message() }}</p>
   {% endif %}
 </footer>
 

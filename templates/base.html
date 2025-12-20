@@ -393,74 +393,7 @@
       {% endfor %}
     </div>
 
-    <div id="install-banner" style="display:none; padding:10px; background:#222; color:#fff; font-size:14px;">
-      <span id="install-text"></span>
-      <button id="install-button"
-              style="margin-left:10px; padding:5px 10px; border:none; background:#4caf50; color:#fff; border-radius:4px; cursor:pointer; display:none;">
-        Installa
-      </button>
-    </div>
 
-    <script>
-      let deferredPrompt = null;
-
-      function isIos() {
-        const ua = window.navigator.userAgent.toLowerCase();
-        return /iphone|ipad|ipod/.test(ua);
-      }
-
-      function isInStandaloneMode() {
-        return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-              (window.navigator.standalone === true);
-      }
-
-      function hideBannerAfterDelay() {
-        const banner = document.getElementById('install-banner');
-        // Nasconde dopo 10 secondi (10000 ms)
-        setTimeout(() => {
-          banner.style.display = 'none';
-        }, 10000);
-      }
-
-      window.addEventListener('load', () => {
-        const banner = document.getElementById('install-banner');
-        const textEl = document.getElementById('install-text');
-        const button = document.getElementById('install-button');
-
-        // iOS: solo istruzioni, niente bottone
-        if (isIos() && !isInStandaloneMode()) {
-          banner.style.display = 'block';
-          textEl.textContent = 'Per installare LIFT OFF sul tuo iPhone: apri il menu Condividi e seleziona "Aggiungi a Home".';
-          hideBannerAfterDelay();
-          return;
-        }
-
-        // Android / desktop: usa beforeinstallprompt
-        window.addEventListener('beforeinstallprompt', (e) => {
-          e.preventDefault();
-          deferredPrompt = e;
-
-          banner.style.display = 'block';
-          textEl.textContent = 'Installa LIFT OFF come app sul tuo dispositivo.';
-          button.style.display = 'inline-block';
-
-          hideBannerAfterDelay();
-
-          button.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-
-            banner.style.display = 'none';
-          }, { once: true });
-        });
-      });
-    </script>
-
-
-    
 
   <script>
     setTimeout(function() {
