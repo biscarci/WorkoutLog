@@ -38,12 +38,10 @@ DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
+""" 
 if DEBUG:
-    # 🧪 sviluppo locale
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
 else:
-    # 🚀 produzione (Railway)
     DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL non impostata")
@@ -55,6 +53,8 @@ else:
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "connect_args": {"sslmode": "require"}
     }
+ """
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)  # Aggiungi questa riga
 login_manager = LoginManager()
