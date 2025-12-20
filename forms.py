@@ -53,8 +53,8 @@ class AddWorkoutForm(WorkoutForm):
 
 
 class AddWeeklyWorkoutForm(FlaskForm):
-    week_text = TextAreaField(('Weekly Workouts Description'), validators=[DataRequired(), Length(min=10)])
-    submit = SubmitField('Importa')
+    week_text = TextAreaField(('Write Weekly Workouts'), validators=[DataRequired(), Length(min=10)])
+    submit = SubmitField('Import')
 
 class PerformanceForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
@@ -79,11 +79,11 @@ class BulkDeleteStatsForm(FlaskForm):
 
 
 class UpdateProfileForm(FlaskForm):
-    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
-    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
+    name = StringField('Name', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Surname', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Nuova Password', validators=[Optional()])
-    confirm_password = PasswordField('Conferma Password', validators=[Optional(), EqualTo('password')])
+    password = PasswordField('New Password', validators=[Optional()])
+    confirm_password = PasswordField('Confirm Password', validators=[Optional(), EqualTo('password')])
 
-    submit = SubmitField('Aggiorna')
+    submit = SubmitField('Update')

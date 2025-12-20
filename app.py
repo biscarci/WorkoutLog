@@ -34,12 +34,12 @@ from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
+DEBUG_MODE = os.getenv("FLASK_DEBUG", "0") == "1"
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-if DEBUG:
+if DEBUG_MODE:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
@@ -76,12 +76,11 @@ def inject_utils():
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=True, default='')
-    surname = db.Column(db.String(150), nullable=True, default='')
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    # store hashed passwords; length bumped to avoid truncation errors with long hashes
+    name = db.Column(db.String(200), nullable=True, default='')
+    surname = db.Column(db.String(200), nullable=True, default='')
+    username = db.Column(db.String(200), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(200), unique=True, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_superuser = db.Column(db.Boolean, default=False)
@@ -104,14 +103,14 @@ class User(UserMixin, db.Model):
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=True)
-    name = db.Column(db.String(50), nullable=False)  
-    description = db.Column(db.String(150), nullable=True)
+    name = db.Column(db.Text, nullable=False)  
+    description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class Performance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=True)
-    description = db.Column(db.String(150), nullable=True)
+    description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
@@ -133,7 +132,7 @@ class UserStatistic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=True)
-    exercise = db.Column(db.String(150), nullable=True)
+    exercise = db.Column(db.Text, nullable=True)
     weight = db.Column(db.Float, nullable=True)
     reps = db.Column(db.Integer, nullable=True)
 
@@ -697,6 +696,7 @@ def delete_workout(id):
     workout = Workout.query.get_or_404(id)
     if workout.user_id != current_user.id and not current_user.is_superuser:
         abort(403)
+    WorkoutPerformance.query.filter_by(workout_id=workout.id).delete()
     db.session.delete(workout)
     db.session.commit()
     flash('Allenamento eliminato con successo.', 'success')
@@ -880,6 +880,7 @@ def edit_performance(id):
 @login_required
 def delete_performance(id):
     perf = Performance.query.get_or_404(id)
+
     if perf.user_id != current_user.id and not current_user.is_superuser:
         abort(403)
 
@@ -1011,4 +1012,4 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG_MODE)

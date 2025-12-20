@@ -3,7 +3,7 @@
 {% block content %}
     <style>
         td  {font-size: small;}
-        th  {font-size: medium;}
+        th  {font-size: small;}
         .user-row { cursor: pointer; }
     </style>
     <div class="container">
@@ -17,13 +17,12 @@
                         <tr>
                             <th> Username </th>
                             <th> Enabled </th>
-                            <th> Reset pwd </th>
+                            <th> Reset Pass.  </th>
                             <th> Remove </th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for u in users %}
-                        {% if not u.is_superuser%}
                         <tr class="align-middle user-row" data-target="details-{{ u.id }}">
                             <td> {{ u.username }}</td>
                             <td>
@@ -66,7 +65,6 @@
                                 </div>
                             </td>
                         </tr>
-                        {% endif %}
                         {% endfor %}
                         </tbody>
                     </table>
