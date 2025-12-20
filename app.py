@@ -464,7 +464,7 @@ def register():
             username=form.username.data,
             email=form.email.data,
             is_superuser=False,
-            is_enabled=True,
+            is_enabled=False,
         )
         new_user.set_password(form.password.data)
         db.session.add(new_user)
