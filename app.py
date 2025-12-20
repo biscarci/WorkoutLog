@@ -38,7 +38,7 @@ DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-""" 
+
 if DEBUG:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
 else:
@@ -53,8 +53,6 @@ else:
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "connect_args": {"sslmode": "require"}
     }
- """
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///workout.db"
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)  # Aggiungi questa riga
 login_manager = LoginManager()
