@@ -198,14 +198,6 @@ def bootstrap_superuser_from_env():
 
 @app.before_request
 def create_tables():
-    if not app.config.get('_DB_INIT_DONE'):
-        try:
-            db.create_all()
-        except Exception:
-            app.logger.exception('db.create_all failed')
-        bootstrap_superuser_from_env()
-        app.config['_DB_INIT_DONE'] = True
-
     if current_user.is_authenticated:
         current_user.last_login = datetime.now(timezone.utc)
         db.session.commit()
