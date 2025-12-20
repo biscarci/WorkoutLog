@@ -118,7 +118,8 @@ def random_motivational_phrase():
  
 def random_rest_message():
     array = [
-        "Oggi workout? No. La bestia si fa i cazzi suoi.",
+        "Rest ind' o' liet.",
+        "Oggi workout? No. rest.",
         "Rest day: non faccio un cazzo per diventare più grosso.",
         "Allenamento di oggi: dormire come un animale e mangiare come una merda.",
         "Oggi niente palestra, i muscoli stanno urlando basta.",
@@ -134,7 +135,6 @@ def random_rest_message():
         "Pesi fermi. Bestia in ricarica.",
         "Allenamento mentale: convincermi che riposare non è da deboli.",
         "Oggi il workout mi guarda. Io lo ignoro.",
-        "Riposo approvato: meglio fermarsi che fare il pirla.",
         "Rest day: cresco anche senza fare un cazzo. Miracolo.",
         "Allenamento fantasma. Recupero reale.",
         "Oggi riposo perché sono grosso, non scemo.",

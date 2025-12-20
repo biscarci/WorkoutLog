@@ -14,6 +14,7 @@
  
   {% if not current_user.is_enabled %}
     <p class="text-center mt-5">Atleta non abilitato</p>
+    <p class="text-center mt-5">Attendi che il supremo coach ti ritenga degno</p>
   {% elif workouts %}
   <div class="accordion" id="workoutAccordion">
     {% for workout in workouts %}
@@ -63,7 +64,7 @@
   {% else %}
     {% if user.is_superuser %}
       <div id="workout-day"class="d-flex justify-content-center align-items-center mt-5">
-        <a class="btn btn-outline-primary" style="min-width: 110px;" href="{{ url_for('add_workout') }}" role="button">
+        <a class="btn btn-outline-primary" style="min-width: 195px;" href="{{ url_for('add_workout') }}" role="button">
           Add Workout
         </a>
       </div>
@@ -72,8 +73,10 @@
           Add Weekly Workouts
         </a>
       </div>
+      <p class="text-center mt-5" style="color: darkgrey;">{{ random_rest_message() }}</p>
+
     {% else %}
-      <p class="text-center mt-5">{{ random_rest_message() }}</p>
+      <p class="text-center mt-5" style="color: darkgrey;">{{ random_rest_message() }}</p>
     {% endif %}
   {% endif %}
 </div>
