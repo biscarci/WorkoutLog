@@ -350,21 +350,36 @@ def delete_user(id):
         return redirect(url_for('admin_users'))
 
     try:
-        # Delete the user and commit changes
+        # 1. Delete WorkoutPerformance records (junction table)
         workouts = Workout.query.filter_by(user_id=user_to_delete.id).all()
-        if workouts:
-            for w in workouts:
-                db.session.delete(w)
+        workout_ids = [w.id for w in workouts]
+        if workout_ids:
+            WorkoutPerformance.query.filter(
+                WorkoutPerformance.workout_id.in_(workout_ids)
+            ).delete(synchronize_session=False)
+        
+        # Delete Performance records
+        Performance.query.filter_by(user_id=user_to_delete.id).delete()
+        
+        # Delete Workout records
+        Workout.query.filter_by(user_id=user_to_delete.id).delete()
+        
+        # Delete UserStatistic records
+        UserStatistic.query.filter_by(user_id=user_to_delete.id).delete()
+    
+        # Finally, delete the user
         db.session.delete(user_to_delete)
         db.session.commit()
+        
         flash(f"User {user_to_delete.username} has been successfully deleted.", "success")
-        logger(current_user.id, f"Deleted user {user_to_delete.username}")
+        logger(current_user.username, f"Deleted user {user_to_delete.username}")
+        
     except Exception as e:
-        # Handle errors and rollback
         db.session.rollback()
         flash(f"An error occurred while deleting the user: {str(e)}", "danger")
-
+        
     return redirect(url_for('admin_users'))
+
 
 
 @app.route('/admin/reset_password/<int:id>', methods=['POST'])
@@ -373,9 +388,9 @@ def delete_user(id):
 def reset_user_password(id):
     """Reset user password to default for admin use."""
     user = User.query.get_or_404(id)
-    if user.is_superuser:
+    """  if user.is_superuser:
         flash("Non puoi resettare la password di un admin.", "warning")
-        return redirect(url_for('admin_users'))
+        return redirect(url_for('admin_users')) """
 
     user.password = generate_password_hash('seiunpollo')
     db.session.commit()

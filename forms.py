@@ -8,24 +8,24 @@ from datetime import datetime
 
 # Form di registrazione
 class RegistrationForm(FlaskForm):
-    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
-    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
+    name = StringField('Name', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Surname', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Length(min=2, max=200)])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('Invia')
+    submit = SubmitField('Register')
 
 
 class AdminRegistrationForm(FlaskForm):
-    name = StringField('Nome', validators=[DataRequired(), Length(min=2, max=50)])
-    surname = StringField('Cognome', validators=[DataRequired(), Length(min=2, max=50)])
+    name = StringField('Name', validators=[DataRequired(), Length(min=2, max=50)])
+    surname = StringField('Surname', validators=[DataRequired(), Length(min=2, max=50)])
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(min=2, max=200)])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Conferma Password', validators=[DataRequired(), EqualTo('password')])
     admin_code = StringField('Codice Admin', validators=[DataRequired(), Length(min=1, max=50)])
-    submit = SubmitField('Invia')
+    submit = SubmitField('Register')
 
 
 
