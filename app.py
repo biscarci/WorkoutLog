@@ -86,7 +86,24 @@ class User(UserMixin, db.Model):
     is_superuser = db.Column(db.Boolean, default=False)
     is_enabled = db.Column(db.Boolean, default=False)
     total_workouts_added = db.Column(db.Integer, default=0)
-    workouts = db.relationship('Workout', backref='user', lazy=True)
+    workouts = db.relationship(
+        'Workout',
+        backref=db.backref('user', lazy=True),
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    performances = db.relationship(
+        'Performance',
+        backref=db.backref('user', lazy=True),
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    statistics = db.relationship(
+        'UserStatistic',
+        backref=db.backref('user', lazy=True),
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
     
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -106,19 +123,38 @@ class Workout(db.Model):
     name = db.Column(db.Text, nullable=False)  
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    links = db.relationship(
+        'WorkoutPerformance',
+        backref=db.backref('workout', lazy=True),
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
 
 class Performance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=True)
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    links = db.relationship(
+        'WorkoutPerformance',
+        backref=db.backref('performance', lazy=True),
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
 
 
 class WorkoutPerformance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
-    performance_id = db.Column(db.Integer, db.ForeignKey('performance.id'), nullable=False)
-
+    workout_id = db.Column(
+        db.Integer, 
+        db.ForeignKey('workout.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    performance_id = db.Column(
+        db.Integer, 
+        db.ForeignKey('performance.id', ondelete='CASCADE'),
+        nullable=False
+    )
     def get_performance(self):
         return Performance.query.get(self.performance_id)
     
@@ -914,6 +950,7 @@ def delete_performance(id):
 
     for link in links:
         db.session.delete(link)
+    db.session.flush() 
     db.session.delete(perf)
     db.session.commit()
     flash('Performance eliminata', 'success')
