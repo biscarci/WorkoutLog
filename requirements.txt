@@ -13,4 +13,4 @@ typing_extensions==4.12.2
 tqdm==4.67.0
 click==8.1.7
 gunicorn==21.2.0
-psycopg2-binary==2.9.7
+psycopg2-binary==2.9.11
