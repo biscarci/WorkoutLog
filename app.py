@@ -79,7 +79,8 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(150), nullable=True, default='')
     surname = db.Column(db.String(150), nullable=True, default='')
     username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    # store hashed passwords; length bumped to avoid truncation errors with long hashes
+    password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
