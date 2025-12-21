@@ -51,86 +51,52 @@
         </div>
         <div class="collapse" id="exerciseStatsBody">
           <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-8 text-center text-md-start">
-                    <label for="exerciseFilter" class="form-label">Exercise</label>
-                    <form id="exerciseFilterForm" method="get" action="{{ url_for('add_performance', id=workout.id) }}">
-                        <select id="exerciseFilter" name="exercise" class="form-select" onchange="this.form.submit()">
-                            <option value="" {% if not selected_exercise %}selected{% endif %}>Select...</option>
-                            {% for ex in exercises %}
-                                <option value="{{ ex }}" {% if selected_exercise == ex %}selected{% endif %}>{{ ex }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                </div>
-             
-            </div>
-
-            {% if selected_exercise %}
-            <style>
-              .rm-divider {
-                  border-right: 1px solid #555; /* dark grey */
-              }
-            </style>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div style="font-size: small;">Max weight</div>
-                        <div style="font-weight: 700;">{{ max_weight if max_weight is not none else '-' }}</div>
-                    </div>
-                    <div class="col-6">
-                        <div style="font-size: small;">Max reps</div>
-                        <div style="font-weight: 700;">{{ max_reps if max_reps is not none else '-' }}</div>
-                    </div>
-                </div>
-                {% if best_1rm %}
-                <hr>
-                {% set chunk_size = (rm_percent_table|length + 1) // 2 %}
-                <div class="row g-2">
-                    {% for start in range(0, rm_percent_table|length, chunk_size) %}
-                    <div class="col-6 rm-col {% if loop.index == 1 %}rm-divider{% endif %}">
-                        <div class="table-responsive">
-                            <table class="table table-dark table-borderless table-sm mb-0">
-                                <tbody>
-                                    {% for row in rm_percent_table[start:start+chunk_size] %}
-                                    <tr class="rm-row" data-percent="{{ row.percent }}" data-kg="{{ row.kg }}">
-                                        <td>{{ row.percent }} <small style="color:rgb(92, 92, 92); font-size: small;">%</small></td>
-                                        <td class="text-end">{{ row.kg }} <small style="color:rgb(92, 92, 92);font-size: small;">kg</small></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-8 text-center text-md-start">
+                <label for="exerciseFilter" class="form-label">Exercise</label>
+                <select id="exerciseFilter" name="exercise" class="form-select">
+                    <option value="" selected>Select...</option>
+                    {% for ex in exercises %}
+                        <option value="{{ ex }}">{{ ex }}</option>
                     {% endfor %}
-                </div>
+                </select>
+            </div>
+         
+        </div>
 
-                {% endif %}
-                <hr>
-                <div class="table-responsive">
-                    <table class="table table-dark table-striped">
-                        <thead>
-                            <tr style="font-size: small;">
-                                <th>Date</th>
-                                <th>Weight</th>
-                                <th>Reps</th>
-                            </tr>
-                        </thead>
-                        <tbody style="font-size: small;">
-                            {% for s in stats_exercise %}
-                            <tr>
-                                <td>{{ s.date.strftime('%d/%m/%Y') if s.date else '-' }}</td>
-                                <td>{{ s.weight if s.weight is not none else '' }}</td>
-                                <td>{{ s.reps if s.reps is not none else '' }}</td>
-                            </tr>
-                            {% endfor %}
-                            {% if not stats_exercise %}
-                            <tr><td colspan="3" class="text-center">No stats for this exercise</td></tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+        <style>
+          .rm-divider {
+              border-right: 1px solid #555; /* dark grey */
+          }
+        </style>
+            <hr>
+            <div class="row text-center" id="maxSummary" style="display: none;">
+                <div class="col-6">
+                    <div style="font-size: small;">Max weight</div>
+                    <div id="maxWeight" style="font-weight: 700;">-</div>
                 </div>
-            {% endif %}
+                <div class="col-6">
+                    <div style="font-size: small;">Max reps</div>
+                    <div id="maxReps" style="font-weight: 700;">-</div>
+                </div>
+            </div>
+            <hr>
+            <div id="rmTables"></div>
+            <hr>
+            <div class="table-responsive">
+                <table class="table table-dark table-striped">
+                    <thead>
+                        <tr style="font-size: small;">
+                            <th>Date</th>
+                            <th>Weight</th>
+                            <th>Reps</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsTableBody" style="font-size: small;">
+                        <tr><td colspan="3" class="text-center">Select an exercise to view stats</td></tr>
+                    </tbody>
+                </table>
+            </div>
           </div>
         </div>
     </div>
@@ -303,18 +269,120 @@
     })();
 
     (function () {
-        const descInput = document.getElementById('description');
-        if (!descInput) return;
-        document.querySelectorAll('.rm-row').forEach(function (row) {
-            row.addEventListener('click', function () {
-                const percent = row.dataset.percent;
-                const kg = row.dataset.kg;
-                if (!percent || !kg) return;
-                const snippet = `@${percent}% - ${kg}`;
-                const current = descInput.value;
-                descInput.value = current ? `${current}\n${snippet}` : snippet;
-                descInput.focus();
+        const statsData = {{ stats_by_exercise|tojson }};
+        const select = document.getElementById('exerciseFilter');
+        const maxWeightEl = document.getElementById('maxWeight');
+        const maxRepsEl = document.getElementById('maxReps');
+        const maxSummary = document.getElementById('maxSummary');
+        const rmTables = document.getElementById('rmTables');
+        const statsTableBody = document.getElementById('statsTableBody');
+        if (!select) return;
+
+        function formatDate(iso) {
+            if (!iso) return '-';
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return '-';
+            return d.toLocaleDateString('en-GB');
+        }
+
+        function computeRmTable(stats) {
+            const estimates = [];
+            for (const s of stats) {
+                if (s.weight == null || s.reps == null) continue;
+                if (s.reps <= 0) continue;
+                const denom = 1.0278 - (0.0278 * Number(s.reps));
+                if (denom <= 0) continue;
+                estimates.push(Number(s.weight) / denom);
+            }
+            const best = estimates.length ? Math.max(...estimates) : null;
+            if (!best) return [];
+            const table = [];
+            for (let p = 100; p >= 40; p -= 5) {
+                const kg = Math.round((best * (p / 100)) * 2) / 2;
+                table.push({ percent: p, kg });
+            }
+            return table;
+        }
+
+        function renderTables(rmTable) {
+            rmTables.innerHTML = '';
+            if (!rmTable.length) return;
+            const chunkSize = Math.ceil(rmTable.length / 2);
+            const row = document.createElement('div');
+            row.className = 'row g-2';
+            for (let i = 0; i < rmTable.length; i += chunkSize) {
+                const col = document.createElement('div');
+                col.className = 'col-6 rm-col ' + (i === 0 ? 'rm-divider' : '');
+                const table = document.createElement('table');
+                table.className = 'table table-dark table-borderless table-sm mb-0';
+                const tbody = document.createElement('tbody');
+                for (const entry of rmTable.slice(i, i + chunkSize)) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'rm-row';
+                    tr.dataset.percent = entry.percent;
+                    tr.dataset.kg = entry.kg;
+                    tr.innerHTML = `<td>${entry.percent} <small style=\"color:rgb(92,92,92); font-size: small;\">%</small></td><td class=\"text-end\">${entry.kg} <small style=\"color:rgb(92,92,92); font-size: small;\">kg</small></td>`;
+                    tbody.appendChild(tr);
+                }
+                table.appendChild(tbody);
+                col.appendChild(table);
+                row.appendChild(col);
+            }
+            rmTables.appendChild(row);
+        }
+
+        function renderStats(exercise) {
+            const stats = statsData[exercise] || [];
+            if (!stats.length) {
+                maxSummary.style.display = 'none';
+                maxWeightEl.textContent = '-';
+                maxRepsEl.textContent = '-';
+                rmTables.innerHTML = '';
+                statsTableBody.innerHTML = '<tr><td colspan=\"3\" class=\"text-center\">No stats for this exercise</td></tr>';
+                return;
+            }
+
+            const weights = stats.filter(s => s.weight != null).map(s => Number(s.weight));
+            const reps = stats.filter(s => s.reps != null).map(s => Number(s.reps));
+            maxWeightEl.textContent = weights.length ? Math.max(...weights) : '-';
+            maxRepsEl.textContent = reps.length ? Math.max(...reps) : '-';
+            maxSummary.style.display = 'flex';
+
+            const rmTable = computeRmTable(stats);
+            renderTables(rmTable);
+
+            statsTableBody.innerHTML = '';
+            for (const s of stats) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${formatDate(s.date)}</td><td>${s.weight ?? ''}</td><td>${s.reps ?? ''}</td>`;
+                statsTableBody.appendChild(tr);
+            }
+
+            // bind click handlers for new rm rows
+            const descInput = document.getElementById('description');
+            document.querySelectorAll('.rm-row').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    if (!descInput) return;
+                    const percent = row.dataset.percent;
+                    const kg = row.dataset.kg;
+                    if (!percent || !kg) return;
+                    const snippet = `@${percent}% - ${kg}`;
+                    const current = descInput.value;
+                    descInput.value = current ? `${current}\\n${snippet}` : snippet;
+                    descInput.focus();
+                });
             });
+        }
+
+        select.addEventListener('change', () => {
+            const ex = select.value;
+            if (!ex) {
+                maxSummary.style.display = 'none';
+                rmTables.innerHTML = '';
+                statsTableBody.innerHTML = '<tr><td colspan=\"3\" class=\"text-center\">Select an exercise to view stats</td></tr>';
+                return;
+            }
+            renderStats(ex);
         });
     })();
 </script>

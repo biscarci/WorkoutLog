@@ -796,116 +796,65 @@ def add_performance(id):
     form = PerformanceForm()
     w = Workout.query.get_or_404(id)
 
-    selected_exercise = (request.args.get('exercise') or '').strip()
-
-    exercises_data = (
-        UserStatistic.query
-        .filter_by(user_id=current_user.id)
-        .filter(UserStatistic.exercise.isnot(None))
-        .order_by(
-            UserStatistic.exercise.asc(),
-            UserStatistic.date.desc()
-        )
-        .all()
+    exercises = sorted(
+        {
+            row[0]
+            for row in db.session.query(UserStatistic.exercise)
+            .filter_by(user_id=current_user.id)
+            .filter(UserStatistic.exercise.isnot(None))
+            .distinct()
+            .all()
+        }
     )
 
-    # Costruisci la lista con il formato desiderato
-    exercises = []
-    for e in exercises_data:
-        exercises.append(f"{e.exercise} - @{e.weight}kg {e.reps}RM")
-
-    stats_exercise = []
-    max_weight = None
-    max_reps = None
-    best_1rm = None
-    rm_percent_table = []
-    
-    selected_name = ''
-    selected_weight = ''
-    selected_reps = ''
-
-    match = None
-    if selected_exercise:
-        match = re.match(
-            r'^(?P<name>.*?)\s*-\s*@(?P<weight>\d+(?:\.\d+)?)kg\s+(?P<reps>\d+)RM$',
-            selected_exercise
+    stats_by_exercise = {}
+    user_stats_all = (
+        UserStatistic.query.filter_by(user_id=current_user.id)
+        .filter(UserStatistic.exercise.isnot(None))
+        .order_by(UserStatistic.date.desc())
+        .all()
+    )
+    for s in user_stats_all:
+        stats_by_exercise.setdefault(s.exercise, []).append(
+            {
+                "date": s.date.isoformat() if isinstance(s.date, datetime) else None,
+                "weight": s.weight,
+                "reps": s.reps,
+            }
         )
 
-    if match:
-        selected_name = match.group('name')
-        selected_weight = match.group('weight')
-        selected_reps = match.group('reps')
-        stats_exercise = UserStatistic.query.filter_by(
-            user_id=current_user.id,
-            exercise=selected_name,
-            weight=float(selected_weight),
-            reps=int(selected_reps)
-        ).order_by(UserStatistic.date.desc()).limit(15).all()
-
-        weights = [s.weight for s in stats_exercise if s.weight is not None]
-        reps = [s.reps for s in stats_exercise if s.reps is not None]
-        max_weight = max(weights) if weights else None
-        max_reps = max(reps) if reps else None
-
-        # Stima 1RM (formula tipo Brzycki) a partire dalle statistiche disponibili
-        one_rm_estimates = []
-        for s in stats_exercise:
-            if s.weight is None or s.reps is None:
-                continue
-            if s.reps <= 0:
-                continue
-            # evita divisione per ~0 con reps troppo alte
-            denom = 1.0278 - (0.0278 * float(s.reps))
-            if denom <= 0:
-                continue
-            one_rm_estimates.append(float(s.weight) / denom)
-
-        best_1rm = max(one_rm_estimates) if one_rm_estimates else None
-        if best_1rm:
-            for p in range(100, 39, -5):
-                rm_percent_table.append(
-                    {
-                        "percent": p,
-                        # arrotonda a 0.5kg per una tabella più “da palestra”
-                        "kg": round((best_1rm * (p / 100.0)) * 2) / 2,
-                    }
-                )
-
-    workout_performances = WorkoutPerformance.query.filter_by(workout_id=id).order_by(WorkoutPerformance.id.desc()).all()
-
+    workout_performances = (
+        WorkoutPerformance.query.filter_by(workout_id=id)
+        .order_by(WorkoutPerformance.id.desc())
+        .all()
+    )
 
     if form.validate_on_submit():
         perf_date = datetime.combine(form.date.data, datetime.min.time()) if form.date.data else datetime.now()
         perf = Performance(
             date=perf_date,
             description=form.description.data.capitalize(),
-            user_id=current_user.id
+            user_id=current_user.id,
         )
         db.session.add(perf)
-        db.session.flush()  # Ottieni l'ID prima del commit
-        
+        db.session.flush()
+
         link = WorkoutPerformance(workout_id=id, performance_id=perf.id)
         db.session.add(link)
         db.session.commit()
         flash('Performance salvata con successo', 'success')
         logger(current_user.id, 'New performance added')
-        return redirect(url_for('add_performance', id=w.id, exercise=selected_exercise or None))
+        return redirect(url_for('add_performance', id=w.id))
 
     return render_template(
-        'add_performance.html', 
-        title='Add Performance', 
-        workout=w, 
-        form=form, 
+        'add_performance.html',
+        title='Add Performance',
+        workout=w,
+        form=form,
         workout_performances=workout_performances,
         exercises=exercises,
-        selected_exercise=selected_exercise,
-        stats_exercise=stats_exercise,
-        max_weight=max_weight,
-        max_reps=max_reps,
-        best_1rm=best_1rm,
-        rm_percent_table=rm_percent_table,
-        )
-
+        stats_by_exercise=stats_by_exercise,
+    )
 
 @app.route('/performance/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
