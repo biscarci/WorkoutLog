@@ -4,6 +4,7 @@
 
 
 <div class="container px-2">
+  {% if user.is_superuser %}
   <h1 class="text-center mb-4">Admin Dashboard</h1>
 
   <div class="row g-3">
@@ -38,11 +39,35 @@
         <h5 class="text-warning">System Health</h5>
         <ul class="list-unstyled">
           <li> <h6 class="text-white-50"> Server Uptime  </h6> {{ server_uptime }}</li>
+          <li class="mt-2"> <h6 class="text-white-50"> DB Connections </h6> {{ db_connections }}</li>
           <li class="mt-2"> <h6 class="text-white-50"> Last Backup </h6> {{ last_backup }} </li>
         </ul>
       </div>
     </div>
+
+    <div class="col-12 col-md-4">
+      <div class="bg-dark p-3 rounded">
+        <h5 class="text-warning">Database Tools</h5>
+        <ul class="list-unstyled">
+          <li> 
+            <a class="btn btn-add-workout" style="min-width: 90px;" href="{{ url_for('export_csv') }}" role="button">Export</a>
+          </li>
+          <li class="mt-2"> 
+            <form method="POST" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+              <label class="btn btn-add-workout mb-0" style="min-width: 90px; cursor: pointer;">
+                Import
+                <input type="file" name="csv_file" accept=".csv,text/csv" onchange="this.form.submit()" hidden>
+              </label>
+            </form>  
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
+
+
+      
+      
 
   <div class="row mt-3">
     <div class="col-12">
@@ -84,6 +109,8 @@
     </div>
   </div>
 </div>
+{% endif %}
+
 
 <div class="bottom-bar fixed-bottom">
     <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>

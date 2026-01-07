@@ -26,16 +26,17 @@
       <div class="workout-description text-center ">
           {{ workout.description | nl2br }}
       </div>
-      {% if workout.description %}
-        <p class="note mb-0">{{ workout.description | nl2br}}</p>
-      {% endif %}
       {% if workout.get_ranges_by_user() %}
         <hr>
         <p class="mb-1">
           {% set ranges = workout.get_ranges_by_user() %}
           {% if ranges is string %}
-            <small class="text-secondary">{{ ranges }}</small>
+            <small class="text-secondary">
+              {{ ranges }}
+              <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
+            </small>
           {% else %}
+          <small class="text-secondary">Your weights</small>
           <ul class="list-group list-group-horizontal">
             {% for range in ranges %}
               <li 
@@ -64,7 +65,6 @@
             style="background-color:#000; border-bottom:1px solid #fff; cursor: pointer;">
             
             <h4 class="mb-0 fw-bold">Your 1RM</h4>
-
             <span
               class="btn btn-dialog position-absolute top-50 end-0 translate-middle-y me-2"
               aria-hidden="true"
@@ -84,7 +84,12 @@
                     {% endfor %}
                 </select>
             </div>
-         
+              <p>
+                <small class="text-secondary text-center">
+                  Non hai inserito i tuoi massimali? Stai dormendo? Muoviti! 
+                  <a href="{{ url_for('user_stats') }}" role="button"> VAI</a>
+                </small>
+            </p>
         </div>
 
         <style>
@@ -300,8 +305,7 @@
         const rmTables = document.getElementById('rmTables');
         const statsTableBody = document.getElementById('statsTableBody');
         const lineSeparators = document.getElementsByClassName('line-separator');
-        
-
+    
         function formatDate(iso) {
             if (!iso) return '-';
             const d = new Date(iso);
@@ -359,7 +363,9 @@
             const stats = statsData[exercise] || [];
             if (!stats.length) {
                 maxSummary.style.display = 'none';
-                lineSeparators.style.display = 'none';
+                for (let i = 0; i < lineSeparators.length; i++) {
+                  lineSeparators[i].style.display = 'none';
+                }
                 maxWeightEl.textContent = '-';
                 maxRepsEl.textContent = '-';
                 rmTables.innerHTML = '';
@@ -372,7 +378,9 @@
             maxWeightEl.textContent = weights.length ? Math.max(...weights) : '-';
             maxRepsEl.textContent = reps.length ? Math.max(...reps) : '-';
             maxSummary.style.display = 'flex';
-            lineSeparators.style.display = 'block';
+            for (let i = 0; i < lineSeparators.length; i++) {
+              lineSeparators[i].style.display = 'block';
+            }
             console.log(lineSeparators)
 
             const rmTable = computeRmTable(stats);

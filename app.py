@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Importazioni standard della libreria Python
 import click
+import csv
 import os
 import threading
 import time
@@ -8,9 +9,10 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 import hmac
 import hashlib
+from io import StringIO
 
 # Importazioni di librerie esterne
-from flask import Flask, Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask.cli import with_appcontext
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
@@ -33,6 +35,7 @@ from flask_migrate import Migrate
 
 
 app = Flask(__name__)
+APP_START_TIME = datetime.now(timezone.utc)
 
 DEBUG_MODE = os.getenv("FLASK_DEBUG", "0") == "1"
 
@@ -239,6 +242,88 @@ def logger(user_id, action):
     db.session.add(l)
     db.session.commit()
 
+def _csv_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return value
+
+def _format_uptime(start_time, now):
+    delta = now - start_time
+    total_seconds = max(0, int(delta.total_seconds()))
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours or days:
+        parts.append(f"{hours}h")
+    if minutes or hours or days:
+        parts.append(f"{minutes}m")
+    parts.append(f"{seconds}s")
+    return " ".join(parts)
+
+def _get_db_connection_count():
+    try:
+        pool = db.engine.pool
+        if hasattr(pool, "checkedout") and callable(pool.checkedout):
+            return pool.checkedout()
+        if hasattr(pool, "checkedout"):
+            return pool.checkedout
+        if hasattr(pool, "status") and callable(pool.status):
+            status = pool.status()
+            match = re.search(r"Checked out connections: (\\d+)", status)
+            if match:
+                return int(match.group(1))
+    except Exception:
+        return None
+    return None
+
+def _parse_str(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text if text != '' else None
+
+def _parse_int(value):
+    text = _parse_str(value)
+    if text is None:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+def _parse_float(value):
+    text = _parse_str(value)
+    if text is None:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+def _parse_bool(value):
+    text = _parse_str(value)
+    if text is None:
+        return None
+    if text.lower() in ('1', 'true', 't', 'yes', 'y'):
+        return True
+    if text.lower() in ('0', 'false', 'f', 'no', 'n'):
+        return False
+    return None
+
+def _parse_datetime(value):
+    text = _parse_str(value)
+    if text is None:
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
 def superuser_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -363,9 +448,11 @@ def admin_dashboard():
 
     recent_activities = log_query.order_by(Log.timestamp.asc()).all()
 
-    # System Status (these would be actual system metrics)
-    db_connections = 10  # Example placeholder
-    server_uptime = '3 days 4 hours'  # Example placeholder
+    # System Status
+    db_connections = _get_db_connection_count()
+    if db_connections is None:
+        db_connections = 'N/A'
+    server_uptime = _format_uptime(APP_START_TIME, datetime.now(timezone.utc))
     last_backup = datetime.utcnow() - timedelta(days=1)
 
   
@@ -383,6 +470,7 @@ def admin_dashboard():
         server_uptime=server_uptime,
         last_backup=last_backup,
         log_date=log_date_str,
+        user=current_user
     )
 
 
@@ -733,6 +821,327 @@ def select_workout_date(day, month, year):
                            next_day=next_day,
                            weekdays=weekdays,
                            user=current_user)
+
+@app.route('/export/csv', methods=['GET'])
+@login_required
+@superuser_required
+def export_csv():
+    fieldnames = [
+        'table',
+        'id',
+        'user_id',
+        'username',
+        'password',
+        'email',
+        'name',
+        'surname',
+        'created_at',
+        'last_login',
+        'is_superuser',
+        'is_enabled',
+        'total_workouts_added',
+        'date',
+        'description',
+        'workout_id',
+        'performance_id',
+        'value',
+        'exercise',
+        'range_order',
+        'weight',
+        'reps',
+        'action',
+        'timestamp',
+        'log_user',
+    ]
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore', lineterminator='\n')
+    writer.writeheader()
+
+    def write_row(table, **data):
+        row = {name: '' for name in fieldnames}
+        row['table'] = table
+        for key, value in data.items():
+            row[key] = _csv_value(value)
+        writer.writerow(row)
+
+    for user in User.query.order_by(User.id.asc()).all():
+        write_row(
+            'user',
+            id=user.id,
+            user_id=user.id,
+            username=user.username,
+            password=user.password,
+            email=user.email,
+            name=user.name,
+            surname=user.surname,
+            created_at=user.created_at,
+            last_login=user.last_login,
+            is_superuser=user.is_superuser,
+            is_enabled=user.is_enabled,
+            total_workouts_added=user.total_workouts_added,
+        )
+
+    for workout in Workout.query.order_by(Workout.id.asc()).all():
+        write_row(
+            'workout',
+            id=workout.id,
+            user_id=workout.user_id,
+            date=workout.date,
+            name=workout.name,
+            description=workout.description,
+        )
+
+    for r in Range.query.order_by(Range.id.asc()).all():
+        write_row(
+            'range',
+            id=r.id,
+            user_id=r.workout.user_id if r.workout else None,
+            workout_id=r.workout_id,
+            value=r.value,
+            exercise=r.exercise,
+            range_order=r.order,
+        )
+
+    for performance in Performance.query.order_by(Performance.id.asc()).all():
+        write_row(
+            'performance',
+            id=performance.id,
+            user_id=performance.user_id,
+            date=performance.date,
+            description=performance.description,
+        )
+
+    for link in WorkoutPerformance.query.order_by(WorkoutPerformance.id.asc()).all():
+        workout_user_id = link.workout.user_id if link.workout else None
+        write_row(
+            'workout_performance',
+            id=link.id,
+            user_id=workout_user_id,
+            workout_id=link.workout_id,
+            performance_id=link.performance_id,
+        )
+
+    for stat in UserStatistic.query.order_by(UserStatistic.id.asc()).all():
+        write_row(
+            'user_statistic',
+            id=stat.id,
+            user_id=stat.user_id,
+            date=stat.date,
+            exercise=stat.exercise,
+            weight=stat.weight,
+            reps=stat.reps,
+        )
+
+    logger(current_user.id, 'CSV export')
+    filename = f"workoutlog_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response = Response(output.getvalue(), mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@app.route('/import/csv', methods=['POST'])
+@login_required
+@superuser_required
+def import_csv():
+    file = request.files.get('csv_file')
+    if not file or not file.filename:
+        flash('Seleziona un file CSV da importare.', 'warning')
+        return redirect(url_for('dashboard'))
+
+    try:
+        content = file.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        flash('Impossibile leggere il CSV: encoding non supportato.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    reader = csv.DictReader(StringIO(content))
+    if not reader.fieldnames or 'table' not in reader.fieldnames:
+        flash('CSV non valido: manca la colonna "table".', 'danger')
+        return redirect(url_for('dashboard'))
+
+    rows_by_table = {}
+    for row in reader:
+        table = _parse_str(row.get('table'))
+        if not table:
+            continue
+        rows_by_table.setdefault(table.lower(), []).append(row)
+
+    counts = {
+        'user': 0,
+        'workout': 0,
+        'range': 0,
+        'performance': 0,
+        'workout_performance': 0,
+        'user_statistic': 0,
+        'log': 0,
+    }
+    skipped = 0
+
+    try:
+        # Import order matters for foreign keys.
+        for row in rows_by_table.get('user', []):
+            user_id = _parse_int(row.get('id'))
+            if user_id is None:
+                skipped += 1
+                continue
+            user = db.session.get(User, user_id)
+            is_new = user is None
+            if user is None:
+                user = User(id=user_id)
+
+            username = _parse_str(row.get('username'))
+            email = _parse_str(row.get('email'))
+            password = _parse_str(row.get('password'))
+            if is_new and (not username or not email or not password):
+                skipped += 1
+                continue
+
+            if username is not None:
+                user.username = username
+            if email is not None:
+                user.email = email
+            if password is not None:
+                user.password = password
+            name = _parse_str(row.get('name'))
+            surname = _parse_str(row.get('surname'))
+            if name is not None:
+                user.name = name
+            if surname is not None:
+                user.surname = surname
+
+            created_at = _parse_datetime(row.get('created_at'))
+            if created_at is not None:
+                user.created_at = created_at
+            last_login = _parse_datetime(row.get('last_login'))
+            if last_login is not None:
+                user.last_login = last_login
+
+            is_superuser = _parse_bool(row.get('is_superuser'))
+            if is_superuser is not None:
+                user.is_superuser = is_superuser
+            is_enabled = _parse_bool(row.get('is_enabled'))
+            if is_enabled is not None:
+                user.is_enabled = is_enabled
+            total_workouts_added = _parse_int(row.get('total_workouts_added'))
+            if total_workouts_added is not None:
+                user.total_workouts_added = total_workouts_added
+
+            db.session.add(user)
+            counts['user'] += 1
+
+        for row in rows_by_table.get('workout', []):
+            workout_id = _parse_int(row.get('id'))
+            user_id = _parse_int(row.get('user_id'))
+            name = _parse_str(row.get('name'))
+            if workout_id is None or user_id is None or not name:
+                skipped += 1
+                continue
+            workout = db.session.get(Workout, workout_id)
+            if workout is None:
+                workout = Workout(id=workout_id)
+            workout.user_id = user_id
+            workout.name = name
+            workout.date = _parse_datetime(row.get('date'))
+            workout.description = _parse_str(row.get('description'))
+            db.session.add(workout)
+            counts['workout'] += 1
+
+        for row in rows_by_table.get('range', []):
+            range_id = _parse_int(row.get('id'))
+            workout_id = _parse_int(row.get('workout_id'))
+            value = _parse_int(row.get('value'))
+            exercise = _parse_str(row.get('exercise'))
+            range_order = _parse_int(row.get('range_order'))
+            if range_id is None or workout_id is None or value is None or not exercise or range_order is None:
+                skipped += 1
+                continue
+            r = db.session.get(Range, range_id)
+            if r is None:
+                r = Range(id=range_id)
+            r.workout_id = workout_id
+            r.value = value
+            r.exercise = exercise
+            r.order = range_order
+            db.session.add(r)
+            counts['range'] += 1
+
+        for row in rows_by_table.get('performance', []):
+            performance_id = _parse_int(row.get('id'))
+            user_id = _parse_int(row.get('user_id'))
+            if performance_id is None or user_id is None:
+                skipped += 1
+                continue
+            performance = db.session.get(Performance, performance_id)
+            if performance is None:
+                performance = Performance(id=performance_id)
+            performance.user_id = user_id
+            performance.date = _parse_datetime(row.get('date'))
+            performance.description = _parse_str(row.get('description'))
+            db.session.add(performance)
+            counts['performance'] += 1
+
+        for row in rows_by_table.get('workout_performance', []):
+            link_id = _parse_int(row.get('id'))
+            workout_id = _parse_int(row.get('workout_id'))
+            performance_id = _parse_int(row.get('performance_id'))
+            if link_id is None or workout_id is None or performance_id is None:
+                skipped += 1
+                continue
+            link = db.session.get(WorkoutPerformance, link_id)
+            if link is None:
+                link = WorkoutPerformance(id=link_id)
+            link.workout_id = workout_id
+            link.performance_id = performance_id
+            db.session.add(link)
+            counts['workout_performance'] += 1
+
+        for row in rows_by_table.get('user_statistic', []):
+            stat_id = _parse_int(row.get('id'))
+            user_id = _parse_int(row.get('user_id'))
+            if stat_id is None or user_id is None:
+                skipped += 1
+                continue
+            stat = db.session.get(UserStatistic, stat_id)
+            if stat is None:
+                stat = UserStatistic(id=stat_id)
+            stat.user_id = user_id
+            stat.date = _parse_datetime(row.get('date'))
+            stat.exercise = _parse_str(row.get('exercise'))
+            stat.weight = _parse_float(row.get('weight'))
+            stat.reps = _parse_int(row.get('reps'))
+            db.session.add(stat)
+            counts['user_statistic'] += 1
+
+        for row in rows_by_table.get('log', []):
+            log_id = _parse_int(row.get('id'))
+            if log_id is None:
+                skipped += 1
+                continue
+            log_entry = db.session.get(Log, log_id)
+            if log_entry is None:
+                log_entry = Log(id=log_id)
+            log_user = _parse_str(row.get('log_user')) or _parse_str(row.get('username'))
+            log_entry.user = log_user
+            log_entry.action = _parse_str(row.get('action'))
+            log_entry.timestamp = _parse_datetime(row.get('timestamp'))
+            db.session.add(log_entry)
+            counts['log'] += 1
+
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'Errore durante import CSV: {exc}', 'danger')
+        return redirect(url_for('dashboard'))
+
+    logger(current_user.id, 'CSV import')
+    flash(
+        'Import CSV completato '
+        f"(user {counts['user']}, workout {counts['workout']}, range {counts['range']}, "
+        f"performance {counts['performance']}, link {counts['workout_performance']}, "
+        f"stats {counts['user_statistic']}, log {counts['log']}, skipped {skipped}).",
+        'success'
+    )
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/workout/add', methods=['GET', 'POST'])
