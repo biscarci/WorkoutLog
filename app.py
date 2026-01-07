@@ -1449,7 +1449,6 @@ def edit_stat(id):
         stat.date = form.date.data
         stat.exercise = form.exercise.data
         stat.weight = form.weight.data
-        stat.reps = form.reps.data
         db.session.commit()
         flash('Statistica aggiornata', 'success')
         logger(current_user.id, 'User stats updated')
@@ -1459,7 +1458,7 @@ def edit_stat(id):
         form.date.data = stat.date
         form.exercise.data = stat.exercise
         form.weight.data = stat.weight
-        form.reps.data = stat.reps
+        
 
     return render_template('edit_stat.html', title='Edit Stat', form=form, stat_id=stat.id)
 
