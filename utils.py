@@ -184,18 +184,18 @@ DAY_ORDER = {
 }
 
 """ 
-    Utilities per il parsing del testo degli allenamenti 
-        week:05/01/2026
+Utilities per il parsing del testo degli allenamenti 
+week:05/01/2026
 
-        day:monday
+day:monday
 
-        work 1:
-        Ev. 1.30’ X 6 Sets 
-        ex:
-        Set (1-2) 2 Squat Snatch 70%
-        Set (3-4) 2 Squat Snatch 75%
-        Set (5-6) 2 Squat Snatch 80%
-        ranges:70,75,80@Squat Snatch
+work 1:
+Ev. 1.30’ X 6 Sets 
+ex:
+Set (1-2) 2 Squat Snatch 70%
+Set (3-4) 2 Squat Snatch 75%
+Set (5-6) 2 Squat Snatch 80%
+ranges:70,75,80@Squat Snatch
 """
 def extract_workouts(day: str, text: str) -> List[Dict]:
     """
