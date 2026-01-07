@@ -19,7 +19,7 @@
     </style>
 
     <h1>
-        <img src="{{ url_for('static', filename='logo_christmas.svg') }}" alt="{{ title }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="{{ title }}" class="brand-logo">
     </h1>
     <form method="POST" action="{{ url_for('login') }}">
         {{ form.csrf_token() }}

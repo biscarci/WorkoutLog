@@ -22,32 +22,55 @@
         <h4 class="card-title text-center fw-semibold mb-2">
             {{ workout.name }} 
         </h4>        
-    <hr>
-    <div class="workout-description text-center ">
-        {{ workout.description | nl2br }}
-    </div>
+      <hr>
+      <div class="workout-description text-center ">
+          {{ workout.description | nl2br }}
+      </div>
+      {% if workout.description %}
+        <p class="note mb-0">{{ workout.description | nl2br}}</p>
+      {% endif %}
+      {% if workout.get_ranges_by_user() %}
+        <hr>
+        <p class="mb-1">
+          {% set ranges = workout.get_ranges_by_user() %}
+          {% if ranges is string %}
+            <small class="text-secondary">{{ ranges }}</small>
+          {% else %}
+          <ul class="list-group list-group-horizontal">
+            {% for range in ranges %}
+              <li 
+                class="list-group-item bg-dark text-secondary" 
+                style="border: 0px!important"
+              >
+                {{ range }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        </p>
+      {% endif %}    
     </div>
   </div>
 
   
   <div class="card mb-3">
         <div class="card-header position-relative text-center"
-            style="background-color:#000; border-bottom:1px solid #fff;">
+            role="button"
+            tabindex="0"
+            data-bs-toggle="collapse"
+            data-bs-target="#exerciseStatsBody"
+            aria-expanded="false"
+            aria-controls="exerciseStatsBody"
+            style="background-color:#000; border-bottom:1px solid #fff; cursor: pointer;">
             
-            <h4 class="mb-0 fw-bold">Your Statistics</h4>
+            <h4 class="mb-0 fw-bold">Your 1RM</h4>
 
-            <button
-              id="toggleExerciseStats"
-              type="button"
+            <span
               class="btn btn-dialog position-absolute top-50 end-0 translate-middle-y me-2"
-              data-bs-toggle="collapse"
-              data-bs-target="#exerciseStatsBody"
-              aria-expanded="false"
-              aria-controls="exerciseStatsBody"
-              aria-label="Toggle panel"
+              aria-hidden="true"
             >
               <i class="bi bi-chevron-down" id="exerciseStatsIcon"></i>
-            </button>
+            </span>
         </div>
         <div class="collapse" id="exerciseStatsBody">
           <div class="card-body">
@@ -69,7 +92,7 @@
               border-right: 1px solid #555; /* dark grey */
           }
         </style>
-            <hr>
+            <hr class="line-separator" style="display: none;">
             <div class="row text-center" id="maxSummary" style="display: none;">
                 <div class="col-6">
                     <div style="font-size: small;">Max weight</div>
@@ -80,9 +103,9 @@
                     <div id="maxReps" style="font-weight: 700;">-</div>
                 </div>
             </div>
-            <hr>
+            <hr class="line-separator" style="display: none;">
             <div id="rmTables"></div>
-            <hr>
+            <hr class="line-separator" style="display: none;">
             <div class="table-responsive">
                 <table class="table table-dark table-striped">
                     <thead>
@@ -106,21 +129,21 @@
   <div class="row justify-content-center text-center mb-4">
     <div class="col">
       <div class="card shadow-sm">
-        <div class="card-header position-relative text-center"
-             style="background-color:#000; border-bottom:1px solid #fff;">
+      <div class="card-header position-relative text-center"
+             role="button"
+             tabindex="0"
+             data-bs-toggle="collapse"
+             data-bs-target="#addPerformanceBody"
+             aria-expanded="true"
+             aria-controls="addPerformanceBody"
+             style="background-color:#000; border-bottom:1px solid #fff; cursor: pointer;">
           <h4 class="fw-bold mb-0">Add Your Score</h4>
-          <button
-            id="toggleAddPerformance"
-            type="button"
+          <span
             class="btn btn-dialog position-absolute top-50 end-0 translate-middle-y me-2"
-            data-bs-toggle="collapse"
-            data-bs-target="#addPerformanceBody"
-            aria-expanded="true"
-            aria-controls="addPerformanceBody"
-            aria-label="Toggle panel"
+            aria-hidden="true"
           >
             <i class="bi bi-chevron-down" id="addPerformanceIcon"></i>
-          </button>
+          </span>
         </div>
         <div class="collapse" id="addPerformanceBody">
           <div class="card-body">
@@ -161,20 +184,20 @@
     </style>
   <div class="card shadow-sm mb-4">
     <div class="card-header position-relative text-center"
-         style="background-color:#000; border-bottom:1px solid #fff;">
+         role="button"
+         tabindex="0"
+         data-bs-toggle="collapse"
+         data-bs-target="#scoresBody"
+         aria-expanded="false"
+         aria-controls="scoresBody"
+         style="background-color:#000; border-bottom:1px solid #fff; cursor: pointer;">
       <h4 class="fw-bold mb-0">Scores</h4>
-      <button
-        id="toggleScores"
-        type="button"
+      <span
         class="btn btn-dialog position-absolute top-50 end-0 translate-middle-y me-2"
-        data-bs-toggle="collapse"
-        data-bs-target="#scoresBody"
-        aria-expanded="false"
-        aria-controls="scoresBody"
-        aria-label="Toggle panel"
+        aria-hidden="true"
       >
         <i class="bi bi-chevron-down" id="scoresIcon"></i>
-      </button>
+      </span>
     </div>
     <div class="collapse" id="scoresBody">
       <div class="card-body">
@@ -276,7 +299,8 @@
         const maxSummary = document.getElementById('maxSummary');
         const rmTables = document.getElementById('rmTables');
         const statsTableBody = document.getElementById('statsTableBody');
-        if (!select) return;
+        const lineSeparators = document.getElementsByClassName('line-separator');
+        
 
         function formatDate(iso) {
             if (!iso) return '-';
@@ -335,6 +359,7 @@
             const stats = statsData[exercise] || [];
             if (!stats.length) {
                 maxSummary.style.display = 'none';
+                lineSeparators.style.display = 'none';
                 maxWeightEl.textContent = '-';
                 maxRepsEl.textContent = '-';
                 rmTables.innerHTML = '';
@@ -347,6 +372,8 @@
             maxWeightEl.textContent = weights.length ? Math.max(...weights) : '-';
             maxRepsEl.textContent = reps.length ? Math.max(...reps) : '-';
             maxSummary.style.display = 'flex';
+            lineSeparators.style.display = 'block';
+            console.log(lineSeparators)
 
             const rmTable = computeRmTable(stats);
             renderTables(rmTable);

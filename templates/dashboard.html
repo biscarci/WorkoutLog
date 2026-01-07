@@ -5,7 +5,7 @@
 <div class="container">
    <a href="{{ url_for('dashboard') }}" style="text-decoration: none;">
       <h1>
-        <img src="{{ url_for('static', filename='logo_christmas.svg') }}" alt="{{ title }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="{{ title }}" class="brand-logo">
       </h1>
     </a>
 
@@ -37,13 +37,40 @@
           {% if workout.description %}
             <p class="note mb-0">{{ workout.description | nl2br}}</p>
           {% endif %}
-          <hr>
-          <div class="btn-toolbar" role="toolbar">
+          {% if workout.get_ranges_by_user() %}
+            <hr>
+            <p class="mb-1">
+              {% set ranges = workout.get_ranges_by_user() %}
+              {% if ranges is string %}
+                <small class="text-secondary">
+                  {{ ranges }}
+                  <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
+                </small>
+             
+              {% else %}
+              <small class="text-secondary">Your weights</small>
+              <ul class="list-group list-group-horizontal">
+                {% for range in ranges %}
+                  <li 
+                    class="list-group-item bg-dark text-secondary" 
+                    style="border: 0px!important"
+                  >
+                    {{ range }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            </p>
+          {% endif %}
+            <hr>
+          <div class="btn-toolbar w-100" role="toolbar">
             <div class="btn-group btn-group-sm">
               <a  href="{{ url_for('add_performance', id=workout.id) }}" class="btn-action" aria-label="Add Performance">
                 <i class="bi bi-graph-up-arrow"></i>
               </a>
-              {% if user.is_superuser %}
+            </div>
+            {% if user.is_superuser %}
+            <div class="btn-group btn-group-sm ms-auto">
               <a href="{{ url_for('edit_workout', id=workout.id) }}" class="btn-action mx-2" aria-label="Modify Workout">
                 <i class="bi bi-pencil-square"></i>
               </a>
@@ -52,9 +79,8 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
-              {% endif %}
-              
             </div>
+            {% endif %}
           </div>
         </div>
       </div>

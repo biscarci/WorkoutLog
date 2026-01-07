@@ -123,12 +123,57 @@ class Workout(db.Model):
     name = db.Column(db.Text, nullable=False)  
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relazione con WorkoutPerformance
     links = db.relationship(
         'WorkoutPerformance',
-        backref=db.backref('workout', lazy=True),
+        backref='workout',  # Rimuovi db.backref() da qui
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+    
+    # Relazione con Range 
+    ranges = db.relationship(
+        'Range',  # Usa stringa per evitare problemi di import
+        back_populates='workout',  # NON backref qui
         lazy=True,
         cascade="all, delete-orphan",
+        order_by='Range.order'  # Mantieni l'ordine automaticamente
     )
+
+    def get_ranges_by_user(self):
+        """Ritorna array di stringhe con i pesi calcolati."""
+        ranges = Range.query\
+            .filter_by(workout_id=self.id)\
+            .order_by(Range.order.asc()).all()
+        
+        result = []
+        
+        for r in ranges:
+            user_stat = UserStatistic.query\
+                .filter(UserStatistic.user_id == self.user_id)\
+                .filter(func.lower(UserStatistic.exercise) == func.lower(r.exercise))\
+                .first()
+            
+            if user_stat and user_stat.weight:
+                weight = round((user_stat.weight * r.value) / 100, 1)
+                result.append(f"{r.value}% @{weight}kg")
+            else:
+                return "Massimale non trovato, quando cazzo ti decidi a registrarlo?"
+        
+        return result
+
+
+class Range(db.Model):  # Usa db.Model, non Base
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(db.Integer, nullable=False)
+    exercise = db.Column(db.String(200), nullable=False)  # Specifica lunghezza
+    order = db.Column(db.Integer, nullable=False)
+    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)  # Nome consistente
+    
+    # Relazione inversa
+    workout = db.relationship('Workout', back_populates='ranges')
+
 
 class Performance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -725,7 +770,7 @@ def add_weekly_workouts():
     if form.validate_on_submit():
         try:
             parsed = parse_week_text(form.week_text.data)
-            #print(parsed)
+            print(parsed)
             for w_data in parsed["workouts"]:
                 w = Workout(
                     date=w_data["date"],
@@ -734,6 +779,17 @@ def add_weekly_workouts():
                     user_id=current_user.id
                 )
                 db.session.add(w)
+                # Aggiungi i ranges se presenti
+                if w_data.get("exercise_range") and w_data.get("ranges"):
+                    db.session.flush()  # Ottieni l'ID del workout appena creato
+                    for order_index, range_value in enumerate(w_data.get("ranges", [])):
+                        r = Range(
+                            value=range_value,
+                            exercise=w_data.get("exercise_range", ""),
+                            order=order_index,
+                            workout_id=w.id
+                        )
+                        db.session.add(r)
                 current_user.total_workouts_added += 1
 
             db.session.commit()
@@ -931,7 +987,7 @@ def user_stats():
             date=form.date.data,
             exercise=form.exercise.data,
             weight=form.weight.data,
-            reps=form.reps.data
+            reps=1
         )
         db.session.add(stat)
         db.session.commit()

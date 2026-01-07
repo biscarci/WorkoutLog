@@ -66,11 +66,35 @@ class EditPerformanceForm(FlaskForm):
     description = TextAreaField(('Description'), validators=[DataRequired(), Length(min=2, max=200)])
     submit = SubmitField('Edit')
 
+movement_choices = [
+    ('Back Squat', 'Back Squat'),
+    ('Front Squat', 'Front Squat'),
+    ('Deadlift', 'Deadlift'),
+    ('Bench Press', 'Bench Press'),
+    ('Clean & Jerk', 'Clean & Jerk'),
+    ('Power Clean', 'Power Clean'),
+    ('Squat Clean', 'Squat Clean'),
+    ('Power Snatch', 'Power Snatch'),
+    ('Squat Snatch', 'Squat Snatch'),
+    ('Thruster', 'Thruster'),
+    ('Push Press', 'Push Press'),
+    ('Push Jerk', 'Push Jerk'),
+    ('Split Jerk', 'Split Jerk'),
+    # ('Pull-Up Strict', 'Pull-Up Strict'),
+    # ('Chest To Bar', 'Chest To Bar'),
+    # ('Ring Muscle-Up', 'Ring Muscle-Up'),
+    # ('Bar Muscle-Up', 'Bar Muscle-Up'),
+    # ('Handstand Push-Up Strict', 'Handstand Push-Up Strict'),
+    # ('Handstand Walk', 'Handstand Walk'),
+    # ('Ring Dip Strict', 'Ring Dip Strict'),
+    # ('Toes To Bar', 'Toes To Bar'),
+]
+
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
-    exercise = StringField('Exercise', validators=[DataRequired(), Length(min=2, max=150)])
+    exercise = SelectField("Exercise", choices= movement_choices, validators=[DataRequired()])
     weight = FloatField('Weight (Kg)', validators=[Optional()])
-    reps = IntegerField('Reps', validators=[Optional()])
+    #reps = IntegerField('Reps', validators=[Optional()], default=1)
     submit = SubmitField('Save')
 
 
