@@ -330,6 +330,29 @@ def _parse_datetime(value):
     except ValueError:
         return None
 
+def _parse_ranges_input(value):
+    text = _parse_str(value)
+    if text is None:
+        return None
+    if '@' not in text:
+        raise ValueError('Formato ranges non valido. Usa 20@Back Squat oppure 20,30,40@Back Squat.')
+    ranges_part, exercise = text.split('@', 1)
+    exercise = exercise.strip()
+    if not exercise:
+        raise ValueError('Formato ranges non valido: esercizio mancante.')
+    ranges = []
+    for raw_item in ranges_part.split(','):
+        raw_item = raw_item.strip()
+        if not raw_item:
+            continue
+        parsed = _parse_int(raw_item)
+        if parsed is None:
+            raise ValueError(f'Valore range non valido: {raw_item}')
+        ranges.append(parsed)
+    if not ranges:
+        raise ValueError('Nessun range valido trovato.')
+    return {"exercise": exercise, "ranges": ranges}
+
 def superuser_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -1182,6 +1205,15 @@ def add_workout():
     form = AddWorkoutForm()
 
     if form.validate_on_submit():
+        ranges_payload = None
+        try:
+            ranges_payload = _parse_ranges_input(form.ranges.data)
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            return render_template('add_workout.html',
+                                   title=('Add Workout'),
+                                   user=current_user,
+                                   form=form)
         w = Workout(
             date=form.date.data,
             name=form.name.data,
@@ -1190,6 +1222,16 @@ def add_workout():
         )
         current_user.total_workouts_added += 1
         db.session.add(w)
+        if ranges_payload:
+            db.session.flush()
+            for order_index, range_value in enumerate(ranges_payload["ranges"]):
+                r = Range(
+                    value=range_value,
+                    exercise=ranges_payload["exercise"],
+                    order=order_index,
+                    workout_id=w.id
+                )
+                db.session.add(r)
         db.session.commit()
         flash('Workout inserito con successo!', 'success')
         logger(current_user.id, 'New workout created')
@@ -1211,7 +1253,6 @@ def add_weekly_workouts():
     if form.validate_on_submit():
         try:
             parsed = parse_week_text(form.week_text.data)
-            print(parsed)
             for w_data in parsed["workouts"]:
                 w = Workout(
                     date=w_data["date"],
@@ -1269,9 +1310,30 @@ def edit_workout(id):
         abort(403)
     form = UpdateWorkoutForm()
     if form.validate_on_submit():
+        ranges_raw = _parse_str(form.ranges.data)
+        ranges_payload = None
+        if ranges_raw is not None:
+            try:
+                ranges_payload = _parse_ranges_input(form.ranges.data)
+            except ValueError as exc:
+                flash(str(exc), 'danger')
+                return render_template('edit_workout.html',
+                                       title=('Edit Workout'),
+                                       form=form,
+                                       workout=w)
         w.date = form.date.data
         w.name = form.name.data
         w.description = form.description.data
+        Range.query.filter_by(workout_id=w.id).delete(synchronize_session=False)
+        if ranges_payload:
+            for order_index, range_value in enumerate(ranges_payload["ranges"]):
+                r = Range(
+                    value=range_value,
+                    exercise=ranges_payload["exercise"],
+                    order=order_index,
+                    workout_id=w.id
+                )
+                db.session.add(r)
         db.session.commit()
         flash('Workout aggiornato con successo!', 'success')
         logger(current_user.id, 'Modified workout '+w.date.strftime('%d-%m-%Y'))
@@ -1280,6 +1342,9 @@ def edit_workout(id):
         form.date.data = w.date
         form.name.data = w.name
         form.description.data = w.description
+        if w.ranges:
+            range_values = ",".join(str(r.value) for r in w.ranges)
+            form.ranges.data = f"{range_values}@{w.ranges[0].exercise}"
 
     return render_template('edit_workout.html',
                            title=('Edit Workout'),

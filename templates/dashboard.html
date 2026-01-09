@@ -43,8 +43,8 @@
             <p class="mb-1">
                 {% if not user_ranges['user_exercise'] %}
                 <small class="text-secondary">
-                  Massimale non trovato di {{user_ranges['exercise']}}, quando cazzo ti decidi a registrarlo?
-                  <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
+                  Massimale di {{user_ranges['exercise']}} non trovato, quando cazzo ti decidi a registrarlo?
+                  <a href="{{ url_for('user_stats') }}" role="button">Inserisci 1RM</a>
                 </small>
               {% else %}
               <small class="text-secondary">In base al tuo 1RM di {{user_ranges['user_exercise']}} a {{user_ranges['user_weight']}} Kg</small>

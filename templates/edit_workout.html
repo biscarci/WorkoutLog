@@ -3,6 +3,11 @@
 
 {% block content %}
 <div class="container">
+    <style>
+        textarea.form-control {
+            height: 250px;
+        }
+    </style>
     <div class="row">
         <h1 class="text-center">Edit Workout {{ workout.date.strftime('%d/%m/%Y') }}</h1>
         <form method="POST" action="{{ url_for('edit_workout', id=workout.id) }}">
@@ -21,6 +26,11 @@
             <fieldset class="col-12">
                 <div class="mb-2">
                     {{ render_field(form.description, class_="form-control", placeholder="Description") }}
+                </div>
+            </fieldset>
+            <fieldset class="col-12">
+                <div class="mb-2">
+                    {{ render_field(form.ranges, class_="form-control", placeholder="Ranges") }}
                 </div>
             </fieldset>
             <fieldset class="col-12 text-center">
