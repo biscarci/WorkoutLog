@@ -37,17 +37,17 @@
           {% if workout.description %}
             <p class="note mb-0">{{ workout.description | nl2br}}</p>
           {% endif %}
-          {% if workout.get_ranges_by_user() %}
+          {% set user_ranges = workout.get_ranges_by_user() %}
+          {% if user_ranges %}
             <hr>
             <p class="mb-1">
-              {% set user_ranges = workout.get_ranges_by_user() %}
-                {% if not user_ranges['ranges'] %}
+                {% if not user_ranges['user_exercise'] %}
                 <small class="text-secondary">
-                  Massimale non trovato, quando cazzo ti decidi a registrarlo?
+                  Massimale non trovato di {{user_ranges['exercise']}}, quando cazzo ti decidi a registrarlo?
                   <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
                 </small>
               {% else %}
-              <small class="text-secondary">Based on your {{user_ranges['user_exercise']}} 1RM {{user_ranges['user_weight']}} Kg</small>
+              <small class="text-secondary">In base al tuo 1RM di {{user_ranges['user_exercise']}} a {{user_ranges['user_weight']}} Kg</small>
               <ul class="list-group list-group-horizontal">
                 {% for range in user_ranges['ranges'] %}
                   <li 
@@ -61,7 +61,7 @@
             {% endif %}
             </p>
           {% endif %}
-            <hr>
+          <hr>
           <div class="btn-toolbar w-100" role="toolbar">
             <div class="btn-group btn-group-sm">
               <a  href="{{ url_for('add_performance', id=workout.id) }}" class="btn-action" aria-label="Add Performance">

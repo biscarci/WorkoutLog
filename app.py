@@ -150,34 +150,41 @@ class Workout(db.Model):
             .filter_by(workout_id=self.id)\
             .order_by(Range.order.asc()).all()
         
-        result = []
-        print('ex_ranges:', ex_ranges)
-        specified_exercise = (ex_ranges[0].exercise if ex_ranges else '').lower().strip()
-        user_stat = UserStatistic.query\
-            .filter(UserStatistic.user_id == self.user_id)\
-            .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
-            .first()
-        for r in ex_ranges:
-            print('Processing range:', r.value, r.exercise)
-            
-            if user_stat and user_stat.weight:
-                weight = round(user_stat.weight * (r.value/100) , 1)
-                result.append(f"{r.value}% @{weight}kg")
-            
-        print('\nFinal ranges result:\n', {
-            'user_exercise': user_stat.exercise if user_stat else None,
-            'user_weight': user_stat.weight if user_stat else None,
-            'exercise': ex_ranges[0].exercise if ex_ranges else '',
-            'ranges': result
-        }
-)
-        return {
-            'user_exercise': user_stat.exercise if user_stat else None,
-            'user_weight': user_stat.weight if user_stat else None,
-            'exercise': ex_ranges[0].exercise if ex_ranges else '',
-            'ranges': result
-        }
+        if ex_ranges:
+            result = []
+            specified_exercise = (ex_ranges[0].exercise if ex_ranges else '').lower().strip()
+            print('ex_ranges:', ex_ranges, 
+                "\nself.user_id:",current_user.id,
+                "\nspecified_exercise:", specified_exercise)
 
+            user_stat = UserStatistic.query\
+                .filter(UserStatistic.user_id == current_user.id)\
+                .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
+                .first()
+            for r in ex_ranges:
+                print('Processing range:', r.value, r.exercise)
+                
+                if user_stat and user_stat.weight:
+                    weight = round(user_stat.weight * (r.value/100) , 1)
+                    result.append(f"{r.value}% @{weight}kg")
+        
+            
+            print('\nFinal ranges result:\n', {
+                    'user_exercise': user_stat.exercise if user_stat else None,
+                    'user_weight': user_stat.weight if user_stat else None,
+                    'exercise': ex_ranges[0].exercise if ex_ranges else '',
+                    'ranges': result
+                }
+            )
+            
+            return {
+                'user_exercise': user_stat.exercise if user_stat else None,
+                'user_weight': user_stat.weight if user_stat else None,
+                'exercise': ex_ranges[0].exercise if ex_ranges else '',
+                'ranges': result
+            }
+        else:
+            return None
 
 class Range(db.Model):  # Usa db.Model, non Base
     id = db.Column(db.Integer, primary_key=True)
@@ -988,6 +995,7 @@ def import_csv():
         'log': 0,
     }
     skipped = 0
+    user_id_map = {}
 
     try:
         # Import order matters for foreign keys.
@@ -996,14 +1004,32 @@ def import_csv():
             if user_id is None:
                 skipped += 1
                 continue
-            user = db.session.get(User, user_id)
-            is_new = user is None
-            if user is None:
-                user = User(id=user_id)
 
             username = _parse_str(row.get('username'))
             email = _parse_str(row.get('email'))
             password = _parse_str(row.get('password'))
+
+            existing_by_username = None
+            if username is not None:
+                existing_by_username = User.query.filter(User.username == username).first()
+            existing_by_email = None
+            if email is not None:
+                existing_by_email = User.query.filter(User.email == email).first()
+
+            if existing_by_username and existing_by_email and existing_by_username.id != existing_by_email.id:
+                skipped += 1
+                continue
+
+            existing_user = existing_by_username or existing_by_email
+            if existing_user and existing_user.id != user_id:
+                user_id_map[user_id] = existing_user.id
+                skipped += 1
+                continue
+
+            user = db.session.get(User, user_id)
+            is_new = user is None
+            if user is None:
+                user = User(id=user_id)
             if is_new and (not username or not email or not password):
                 skipped += 1
                 continue
@@ -1039,11 +1065,14 @@ def import_csv():
                 user.total_workouts_added = total_workouts_added
 
             db.session.add(user)
+            user_id_map[user_id] = user.id
             counts['user'] += 1
 
         for row in rows_by_table.get('workout', []):
             workout_id = _parse_int(row.get('id'))
             user_id = _parse_int(row.get('user_id'))
+            if user_id is not None:
+                user_id = user_id_map.get(user_id, user_id)
             name = _parse_str(row.get('name'))
             if workout_id is None or user_id is None or not name:
                 skipped += 1
@@ -1080,6 +1109,8 @@ def import_csv():
         for row in rows_by_table.get('performance', []):
             performance_id = _parse_int(row.get('id'))
             user_id = _parse_int(row.get('user_id'))
+            if user_id is not None:
+                user_id = user_id_map.get(user_id, user_id)
             if performance_id is None or user_id is None:
                 skipped += 1
                 continue
@@ -1110,6 +1141,8 @@ def import_csv():
         for row in rows_by_table.get('user_statistic', []):
             stat_id = _parse_int(row.get('id'))
             user_id = _parse_int(row.get('user_id'))
+            if user_id is not None:
+                user_id = user_id_map.get(user_id, user_id)
             if stat_id is None or user_id is None:
                 skipped += 1
                 continue
