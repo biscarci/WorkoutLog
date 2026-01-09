@@ -21,7 +21,8 @@ def random_motivational_phrase():
         "TUTTO NELLA SERENITÀ",
         "NON SENTO NIENTE",
         "SIUUP",
-        "STA SUCCENNDO"
+        "STA SUCCENNDO",
+        "NELLA SIUP LIFE"
     ]
     other_phrases = [
         "RESPIRA DOPO",
@@ -222,7 +223,6 @@ def extract_workouts(day: str, text: str) -> List[Dict]:
     # Estrai tutti i work block
     work_pattern = r"work\s+(\d+):([\s\S]*?)(?=\n\s*work\s+\d+:|$)"
     work_matches = re.findall(work_pattern, day_content, re.IGNORECASE)
-    print("WORK MATCHES:", work_matches)
     for work_number, work_content in work_matches:
         work_data = _parse_work_block(int(work_number), work_content.strip())
         result.append(work_data)

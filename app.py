@@ -21,7 +21,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func
+from sqlalchemy import func, and_
 
 # Importazioni del progetto locale
 from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
@@ -153,29 +153,16 @@ class Workout(db.Model):
         if ex_ranges:
             result = []
             specified_exercise = (ex_ranges[0].exercise if ex_ranges else '').lower().strip()
-            print('ex_ranges:', ex_ranges, 
-                "\nself.user_id:",current_user.id,
-                "\nspecified_exercise:", specified_exercise)
 
             user_stat = UserStatistic.query\
                 .filter(UserStatistic.user_id == current_user.id)\
                 .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
                 .first()
             for r in ex_ranges:
-                print('Processing range:', r.value, r.exercise)
                 
                 if user_stat and user_stat.weight:
                     weight = round(user_stat.weight * (r.value/100) , 1)
                     result.append(f"{r.value}% @{weight}kg")
-        
-            
-            print('\nFinal ranges result:\n', {
-                    'user_exercise': user_stat.exercise if user_stat else None,
-                    'user_weight': user_stat.weight if user_stat else None,
-                    'exercise': ex_ranges[0].exercise if ex_ranges else '',
-                    'ranges': result
-                }
-            )
             
             return {
                 'user_exercise': user_stat.exercise if user_stat else None,
@@ -1434,7 +1421,7 @@ def delete_performance(id):
 def user_stats():
     form = UserStatisticForm()
     delete_form = BulkDeleteStatsForm()
-    selected_exercise = (request.args.get('exercise') or '').strip()
+    
     if form.validate_on_submit():
         stat = UserStatistic(
             user_id=current_user.id,
@@ -1449,21 +1436,31 @@ def user_stats():
         logger(current_user.id, 'User stats added')
         return redirect(url_for('user_stats'))
 
-    exercises = [
-        row[0]
-        for row in db.session.query(UserStatistic.exercise)
-        .filter_by(user_id=current_user.id)
-        .filter(UserStatistic.exercise.isnot(None))
-        .distinct()
-        .order_by(UserStatistic.exercise.asc())
+    subquery = (
+        db.session.query(
+            UserStatistic.exercise,
+            func.max(UserStatistic.date).label('max_date')
+        )
+        .filter(UserStatistic.user_id == current_user.id)
+        .group_by(UserStatistic.exercise)
+        .subquery()
+    )
+
+    stats = (
+        UserStatistic.query
+        .join(
+            subquery,
+            and_(
+                UserStatistic.exercise == subquery.c.exercise,
+                UserStatistic.date == subquery.c.max_date
+            )
+        )
+        .filter(UserStatistic.user_id == current_user.id)
+        .order_by(UserStatistic.date.desc())
         .all()
-    ]
+    )
 
-    stats_query = UserStatistic.query.filter_by(user_id=current_user.id)
-    if selected_exercise:
-        stats_query = stats_query.filter(UserStatistic.exercise == selected_exercise)
-    stats = stats_query.order_by(UserStatistic.date.desc()).all()
-
+    exercises = [s.exercise for s in stats if s.exercise is not None]
     weights = [s.weight for s in stats if s.weight is not None]
     reps = [s.reps for s in stats if s.reps is not None]
     max_weight = max(weights) if weights else None
@@ -1476,10 +1473,82 @@ def user_stats():
         delete_form=delete_form,
         stats=stats,
         exercises=exercises,
-        selected_exercise=selected_exercise,
         max_weight=max_weight,
         max_reps=max_reps,
     )
+
+
+@app.route('/stats/history/<path:exercise>', methods=['GET'])
+@login_required
+def stat_history(exercise):
+    specified_exercise = (exercise or '').strip().lower()
+    if not specified_exercise:
+        abort(404)
+
+    delete_form = BulkDeleteStatsForm()
+
+    stats = (
+        UserStatistic.query.filter_by(user_id=current_user.id)
+        .filter(func.lower(UserStatistic.exercise) == specified_exercise)
+        .order_by(UserStatistic.date.asc())
+        .all()
+    )
+
+    valid_stats = [s for s in stats if s.date is not None and s.weight is not None]
+    display_exercise = stats[0].exercise if stats else exercise
+
+    first_entry = valid_stats[0] if valid_stats else None
+    last_entry = valid_stats[-1] if valid_stats else None
+    best_entry = max(valid_stats, key=lambda s: s.weight) if valid_stats else None
+    delta = None
+    if first_entry and last_entry:
+        try:
+            delta = round(last_entry.weight - first_entry.weight, 2)
+        except TypeError:
+            delta = None
+
+    return render_template(
+        'stat_history.html',
+        title='Stat History',
+        exercise=display_exercise,
+        stats=list(reversed(valid_stats)),
+        delete_form=delete_form,
+        first_entry=first_entry,
+        last_entry=last_entry,
+        best_entry=best_entry,
+        delta=delta,
+    )
+
+
+@app.route('/api/stats/history/<path:exercise>', methods=['GET'])
+@login_required
+def stat_history_api(exercise):
+    specified_exercise = (exercise or '').strip().lower()
+    if not specified_exercise:
+        abort(404)
+
+    stats = (
+        UserStatistic.query.filter_by(user_id=current_user.id)
+        .filter(func.lower(UserStatistic.exercise) == specified_exercise)
+        .order_by(UserStatistic.date.asc())
+        .all()
+    )
+
+    points = []
+    for s in stats:
+        if s.date is None or s.weight is None:
+            continue
+        points.append(
+            {
+                "date": s.date.isoformat(),
+                "label": s.date.strftime('%d/%m/%y'),
+                "weight": s.weight,
+                "reps": s.reps,
+            }
+        )
+
+    display_exercise = stats[0].exercise if stats else exercise
+    return jsonify({"exercise": display_exercise, "points": points})
 
 
 @app.route('/stats/edit/<int:id>', methods=['GET', 'POST'])

@@ -2,6 +2,19 @@
 {% from 'bootstrap5/form.html' import render_field %}
 
 {% block content %}
+<style>
+    .btn-action i{
+      font-size: 0.8rem!important;   /* prova 0.7 / 0.6 se le vuoi ancora più piccole */
+    }
+
+    .btn-action {
+      padding: 2px 4px!important;    /* riduce anche l’area cliccabile */
+    }
+    .btn-action {
+      width: unset;
+      height: unset;
+    }
+</style>
 <div class="container">
     <h2 class="text-center mb-3">Add 1RM</h2>
     <div class="row justify-content-center">
@@ -31,6 +44,7 @@
                             <th>Date</th>
                             <th>Exercise</th>
                             <th>Weight (Kg)</th>
+                            <th>History</th>
                            <!--  <th></th> -->
                         </tr>
                     </thead>
@@ -53,7 +67,14 @@
                                 </a>
                             </td>
                             <td>{{ s.weight if s.weight is not none else '' }}</td>
-                           <!--  <td>{{ s.reps if s.reps is not none else '' }}</td> -->
+                            <td>
+                                <a class="btn-action"
+                                    style="height: 25px;"
+                                   href="{{ url_for('stat_history', exercise=s.exercise) }}"
+                                   aria-label="View History">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                            </a>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% if not stats %}

@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block styles %}
+  {{ super() }}
+  <style>
+
+    .exercise-pill {
+      border: 1px solid #fff;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .stat-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat-tile {
+      border: 1px solid #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.2));
+      box-shadow: 0 0 22px rgba(255, 255, 255, 0.06);
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #b3b3b3;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .stat-sub {
+      font-size: 0.8rem;
+      color: #b3b3b3;
+    }
+
+    .chart-shell {
+      position: relative;
+      border: 1px solid #fff;
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 320px;
+      background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.4));
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.05);
+    }
+
+    .chart-shell canvas {
+      width: 100%;
+      height: 280px;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #b3b3b3;
+      text-align: center;
+      padding: 0 12px;
+    }
+    .btn-action i,
+    .btn-delete i {
+      font-size: 0.8rem!important;   /* prova 0.7 / 0.6 se le vuoi ancora più piccole */
+    }
+
+    .btn-action,
+    .btn-delete {
+      padding: 2px 4px!important;    /* riduce anche l’area cliccabile */
+    }
+    .btn-action {
+      width: unset;
+      height: unset;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">Progressione 1RM</h2>
+    <span class="exercise-pill">{{ exercise }}</span>
+  </div>
+  <p class="text-center text-secondary mb-4">Segui il miglioramento dei massimali nel tempo.</p>
+
+  <div class="stat-hero">
+    <div class="stat-tile">
+      <div class="stat-label">Best 1RM</div>
+      <div class="stat-value">
+        {% if best_entry %}
+          {{ best_entry.weight | round(1) }} kg
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-sub">
+        {% if best_entry and best_entry.date %}
+          {{ best_entry.date.strftime('%d/%m/%y') }}
+        {% else %}
+          Nessuna data
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">First</div>
+      <div class="stat-value">
+        {% if first_entry %}
+          {{ first_entry.weight | round(1) }} kg
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-sub">
+        {% if first_entry and first_entry.date %}
+          {{ first_entry.date.strftime('%d/%m/%y') }}
+        {% else %}
+          Nessuna data
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Latest</div>
+      <div class="stat-value">
+        {% if last_entry %}
+          {{ last_entry.weight | round(1) }} kg
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-sub">
+        {% if last_entry and last_entry.date %}
+          {{ last_entry.date.strftime('%d/%m/%y') }}
+        {% else %}
+          Nessuna data
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Delta</div>
+      <div class="stat-value">
+        {% if delta is not none %}
+          {{ '+' if delta > 0 else '' }}{{ delta | round(1) }} kg
+        {% else %}
+          -
+        {% endif %}
+      </div>
+      <div class="stat-sub">Progresso totale</div>
+    </div>
+  </div>
+
+  <div class="chart-shell">
+    <canvas id="statChart" aria-label="Grafico progressione massimali"></canvas>
+    <div id="chart-empty" class="chart-empty d-none">Nessun dato disponibile per questo esercizio.</div>
+  </div>
+
+  <div class="table-responsive mt-4">
+    <table class="table table-dark table-striped">
+      <thead>
+        <tr style="font-size: small;">
+          <th>Date</th>
+          <th>Weight (Kg)</th>
+          <th style="width: 120px;">Azioni</th>
+        </tr>
+      </thead>
+      <tbody style="font-size: small;">
+        {% for s in stats %}
+        <tr>
+          <td>{{ s.date.strftime('%d/%m/%y') if s.date else '-' }}</td>
+          <td>{{ s.weight if s.weight is not none else '' }}</td>
+          <td>
+            <div class="d-flex gap-2">
+              <a class="btn-action" href="{{ url_for('edit_stat', id=s.id) }}" aria-label="Modifica statistica">
+                <i class="bi bi-pencil-square"></i>
+              </a>
+              <form method="POST" action="{{ url_for('delete_stats') }}" style="display: inline;">
+                {{ delete_form.csrf_token() }}
+                <input type="hidden" name="selected_ids" value="{{ s.id }}">
+                <button class="btn-delete" type="submit" aria-label="Elimina statistica"
+                  onclick="return confirm('Vuoi eliminare questa statistica?');">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not stats %}
+        <tr><td colspan="3" class="text-center">Nessun dato disponibile</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <a class="btn btn-add-workout btn-block" href="{{ url_for('user_stats') }}" role="button">Back</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    (function () {
+      const endpoint = "{{ url_for('stat_history_api', exercise=exercise) }}";
+      const chartEl = document.getElementById('statChart');
+      const emptyEl = document.getElementById('chart-empty');
+
+      fetch(endpoint)
+        .then(response => response.json())
+        .then(payload => {
+          const points = Array.isArray(payload.points) ? payload.points : [];
+          if (!points.length) {
+            emptyEl.classList.remove('d-none');
+            return;
+          }
+
+          const labels = points.map(point => point.label || point.date);
+          const weights = points.map(point => point.weight);
+          const runningMax = [];
+          let currentMax = null;
+          weights.forEach(weight => {
+            if (weight == null) {
+              runningMax.push(currentMax);
+              return;
+            }
+            if (currentMax === null || weight > currentMax) {
+              currentMax = weight;
+            }
+            runningMax.push(currentMax);
+          });
+
+          const ctx = chartEl.getContext('2d');
+          const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+          gradient.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+          gradient.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: '1RM',
+                  data: weights,
+                  borderColor: '#ffffff',
+                  backgroundColor: gradient,
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                  pointBackgroundColor: '#ffffff'
+                },
+                {
+                  label: 'Best so far',
+                  data: runningMax,
+                  borderColor: 'rgba(255, 255, 255, 0.45)',
+                  borderDash: [6, 6],
+                  pointRadius: 0,
+                  tension: 0.35,
+                  fill: false
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  labels: {
+                    color: '#ffffff',
+                    font: { size: 11 }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#000000',
+                  borderColor: '#ffffff',
+                  borderWidth: 1,
+                  titleColor: '#ffffff',
+                  bodyColor: '#ffffff',
+                  padding: 10
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                },
+                y: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                  title: {
+                    display: true,
+                    text: 'Kg',
+                    color: '#ffffff'
+                  }
+                }
+              }
+            }
+          });
+        })
+        .catch(() => {
+          emptyEl.classList.remove('d-none');
+        });
+    })();
+  </script>
+{% endblock %}
