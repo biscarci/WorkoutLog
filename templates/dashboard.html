@@ -40,16 +40,16 @@
           {% if workout.get_ranges_by_user() %}
             <hr>
             <p class="mb-1">
-              {% set ranges = workout.get_ranges_by_user() %}
-              {% if ranges is string %}
+              {% set user_ranges = workout.get_ranges_by_user() %}
+                {% if not user_ranges['ranges'] %}
                 <small class="text-secondary">
-                  {{ ranges }}
+                  Massimale non trovato, quando cazzo ti decidi a registrarlo?
                   <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
                 </small>
               {% else %}
-              <small class="text-secondary">Your weights</small>
+              <small class="text-secondary">Based on your {{user_ranges['user_exercise']}} 1RM {{user_ranges['user_weight']}} Kg</small>
               <ul class="list-group list-group-horizontal">
-                {% for range in ranges %}
+                {% for range in user_ranges['ranges'] %}
                   <li 
                     class="list-group-item bg-dark text-secondary" 
                     style="border: 0px!important"

@@ -146,25 +146,37 @@ class Workout(db.Model):
 
     def get_ranges_by_user(self):
         """Ritorna array di stringhe con i pesi calcolati."""
-        ranges = Range.query\
+        ex_ranges = Range.query\
             .filter_by(workout_id=self.id)\
             .order_by(Range.order.asc()).all()
         
         result = []
-        
-        for r in ranges:
-            user_stat = UserStatistic.query\
-                .filter(UserStatistic.user_id == self.user_id)\
-                .filter(func.lower(UserStatistic.exercise) == func.lower(r.exercise))\
-                .first()
+        print('ex_ranges:', ex_ranges)
+        specified_exercise = (ex_ranges[0].exercise if ex_ranges else '').lower().strip()
+        user_stat = UserStatistic.query\
+            .filter(UserStatistic.user_id == self.user_id)\
+            .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
+            .first()
+        for r in ex_ranges:
+            print('Processing range:', r.value, r.exercise)
             
             if user_stat and user_stat.weight:
-                weight = round((user_stat.weight * r.value) / 100, 1)
+                weight = round(user_stat.weight * (r.value/100) , 1)
                 result.append(f"{r.value}% @{weight}kg")
-            else:
-                return "Massimale non trovato, quando cazzo ti decidi a registrarlo?"
-        
-        return result
+            
+        print('\nFinal ranges result:\n', {
+            'user_exercise': user_stat.exercise if user_stat else None,
+            'user_weight': user_stat.weight if user_stat else None,
+            'exercise': ex_ranges[0].exercise if ex_ranges else '',
+            'ranges': result
+        }
+)
+        return {
+            'user_exercise': user_stat.exercise if user_stat else None,
+            'user_weight': user_stat.weight if user_stat else None,
+            'exercise': ex_ranges[0].exercise if ex_ranges else '',
+            'ranges': result
+        }
 
 
 class Range(db.Model):  # Usa db.Model, non Base

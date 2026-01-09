@@ -27,29 +27,29 @@
           {{ workout.description | nl2br }}
       </div>
       {% if workout.get_ranges_by_user() %}
-        <hr>
-        <p class="mb-1">
-          {% set ranges = workout.get_ranges_by_user() %}
-          {% if ranges is string %}
-            <small class="text-secondary">
-              {{ ranges }}
-              <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
-            </small>
-          {% else %}
-          <small class="text-secondary">Your weights</small>
-          <ul class="list-group list-group-horizontal">
-            {% for range in ranges %}
-              <li 
-                class="list-group-item bg-dark text-secondary" 
-                style="border: 0px!important"
-              >
-                {{ range }}
-              </li>
-            {% endfor %}
-          </ul>
+            <hr>
+            <p class="mb-1">
+              {% set user_ranges = workout.get_ranges_by_user() %}
+                {% if not user_ranges['ranges'] %}
+                <small class="text-secondary">
+                  Massimale non trovato, quando cazzo ti decidi a registrarlo?
+                  <a href="{{ url_for('user_stats') }}" role="button">Set 1RM</a>
+                </small>
+              {% else %}
+              <small class="text-secondary">Based on your {{user_ranges['user_exercise']}} 1RM {{user_ranges['user_weight']}} Kg</small>
+              <ul class="list-group list-group-horizontal">
+                {% for range in user_ranges['ranges'] %}
+                  <li 
+                    class="list-group-item bg-dark text-secondary" 
+                    style="border: 0px!important"
+                  >
+                    {{ range }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            </p>
         {% endif %}
-        </p>
-      {% endif %}    
     </div>
   </div>
 
