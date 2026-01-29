@@ -157,6 +157,7 @@ class Workout(db.Model):
             user_stat = UserStatistic.query\
                 .filter(UserStatistic.user_id == current_user.id)\
                 .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
+                .order_by(UserStatistic.date.desc(), UserStatistic.id.desc())\
                 .first()
             for r in ex_ranges:
                 
