@@ -186,7 +186,7 @@ DAY_ORDER = {
 
 """ 
 Utilities per il parsing del testo degli allenamenti 
-week:05/01/2026
+week:02/02/2026
 
 day:monday
 
@@ -194,9 +194,10 @@ work 1:
 Ev. 1.30’ X 6 Sets 
 ex:
 Set (1-2) 2 Squat Snatch 70%
-Set (3-4) 2 Squat Snatch 75%
+Set (3-4) 2 Squat clean 75%
 Set (5-6) 2 Squat Snatch 80%
-ranges:70,75,80@Squat Snatch
+ranges1:70,75,80@Squat Snatch
+ranges2:70,75,80@Squat Clean
 """
 def extract_workouts(day: str, text: str) -> List[Dict]:
     """
@@ -257,17 +258,30 @@ def _parse_work_block(work_number: int, content: str) -> Dict:
     name_part, exercises_part = content.split("ex:", 1)
     work_data["name"] = name_part.strip()
     
-    # Gestisci ranges se presenti
-    if "ranges:" in exercises_part:
-        # Separa esercizi e ranges e recupera l'esercizio su cui fare i ranges
-        # es. (...)ranges:45,80@Muscle Snatch
-        exercises_part, ranges_part = exercises_part.split("ranges:", 1)
-        ranges_part, exercise_range = ranges_part.split("@", 1)
-        work_data["exercise_range"] = exercise_range.strip()
-        work_data["ranges"] = _parse_list_items(ranges_part)
-    
-    # Parsa gli esercizi
-    work_data["exercises"] = _parse_list_items(exercises_part)
+    # Estrai fino a 3 gruppi di ranges (ranges, ranges1, ranges2, ranges3)
+    range_pattern = re.compile(r"ranges(?P<idx>[0-3]?):\s*([^\n@]+)@([^\n]+)", re.IGNORECASE)
+    range_groups = []
+    for match in range_pattern.finditer(exercises_part):
+        ranges_part = match.group(2).strip()
+        exercise_range = match.group(3).strip()
+        range_groups.append({
+            "exercise": exercise_range,
+            "ranges": _parse_list_items(ranges_part)
+        })
+
+    # Rimuovi le righe dei ranges prima di parsare gli esercizi
+    exercises_part_clean = range_pattern.sub("", exercises_part)
+
+    # Compatibilità con le chiavi esistenti (ranges, ranges1, ranges2...)
+    for idx, group in enumerate(range_groups[:3]):
+        suffix = "" if idx == 0 else str(idx)
+        work_data[f"exercise_range{suffix}"] = group["exercise"]
+        work_data[f"ranges{suffix}"] = group["ranges"]
+
+    work_data["range_groups"] = range_groups
+
+    # Parsa gli esercizi rimanenti
+    work_data["exercises"] = _parse_list_items(exercises_part_clean)
     
     return work_data
 
@@ -371,6 +385,7 @@ def parse_week_text(raw_text):
                 "description": workout.get("exercises"),
                 "ranges": workout.get("ranges", []),
                 "exercise_range": workout.get("exercise_range", None),
+                "range_groups": workout.get("range_groups", []),
             })
 
 

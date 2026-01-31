@@ -26,29 +26,34 @@
       <div class="workout-description text-center ">
           {{ workout.description | nl2br }}
       </div>
-      {% set user_ranges = workout.get_ranges_by_user() %}
-      {% if user_ranges %}
+      {% set ranges_groups = workout.get_ranges_by_user() %}
+      {% if ranges_groups %}
         <hr>
-        <p class="mb-1">
-        {% if not user_ranges['user_exercise'] %}
-          <small class="text-secondary">
-          Massimale di {{user_ranges['exercise']}} non trovato, quando cazzo ti decidi a registrarlo?
-          <a href="{{ url_for('user_stats') }}" role="button">Inserisci 1RM</a>
-          </small>
-        {% else %}
-          <small class="text-secondary">In base al tuo 1RM di {{user_ranges['user_exercise']}} a {{user_ranges['user_weight']}} Kg</small>
-          <ul class="list-group list-group-horizontal">
-            {% for range in user_ranges['ranges'] %}
-              <li 
-                class="list-group-item bg-dark text-secondary" 
-                style="border: 0px!important"
-              >
-                {{ range }}
-              </li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-        </p>
+        {% for group in ranges_groups %}
+          <p class="mb-1">
+            {% if not group['user_exercise'] %}
+              <small class="text-secondary">
+              Massimale di {{ group['exercise'] }} non trovato, quando cazzo ti decidi a registrarlo?
+              <a href="{{ url_for('user_stats') }}" role="button">Inserisci 1RM</a>
+              </small>
+            {% else %}
+              <small class="text-secondary">In base al tuo 1RM di {{ group['user_exercise'] }} a {{ group['user_weight'] }} Kg</small>
+              <ul class="list-group list-group-horizontal">
+                {% for range in group['ranges'] %}
+                  <li 
+                    class="list-group-item bg-dark text-secondary" 
+                    style="border: 0px!important"
+                  >
+                    {{ range }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </p>
+          {% if not loop.last %}
+            <hr class="my-1">
+          {% endif %}
+        {% endfor %}
         {% endif %}
     </div>
   </div>

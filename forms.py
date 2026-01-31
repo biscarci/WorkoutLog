@@ -40,7 +40,9 @@ class LoginForm(FlaskForm):
 class WorkoutForm(FlaskForm):
     date       = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     name       = StringField(('Name'), validators=[DataRequired(), Length(min=2, max=150)])
-    ranges     = StringField(('Ranges (e.g., 50,60,70@Back Squat)'), validators=[Optional(), Length(min=2, max=100)])
+    ranges1     = StringField(('Ranges1 (e.g., 50,60,70@Back Squat)'), validators=[Optional(), Length(min=2, max=100)])
+    ranges2     = StringField(('Ranges2 (e.g., 50,60,70@Front Squat)'), validators=[Optional(), Length(min=2, max=100)])
+    ranges3     = StringField(('Ranges3 (e.g., 50,60,70@Bench Press)'), validators=[Optional(), Length(min=2, max=100)])
     description= TextAreaField(('Description'), validators=[Optional()])
    
 # Form per l'aggiornamento dell'esercizio

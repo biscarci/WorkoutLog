@@ -22,6 +22,7 @@ from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, and_
+from collections import defaultdict
 
 # Importazioni del progetto locale
 from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
@@ -145,34 +146,51 @@ class Workout(db.Model):
     )
 
     def get_ranges_by_user(self):
-        """Ritorna array di stringhe con i pesi calcolati."""
-        ex_ranges = Range.query\
-            .filter_by(workout_id=self.id)\
-            .order_by(Range.order.asc()).all()
-        
-        if ex_ranges:
-            result = []
-            specified_exercise = (ex_ranges[0].exercise if ex_ranges else '').lower().strip()
+        """Restituisce i ranges raggruppati per esercizio con i pesi calcolati."""
+        ex_ranges = (
+            Range.query
+            .filter_by(workout_id=self.id)
+            .order_by(Range.order.asc(), Range.id.asc())
+            .all()
+        )
+        if not ex_ranges:
+            return None
 
-            user_stat = UserStatistic.query\
-                .filter(UserStatistic.user_id == current_user.id)\
-                .filter(func.lower(UserStatistic.exercise) == specified_exercise)\
-                .order_by(UserStatistic.date.desc(), UserStatistic.id.desc())\
+        grouped = {}
+        exercise_order = []
+        for r in ex_ranges:
+            key = r.exercise
+            if key not in grouped:
+                grouped[key] = []
+                exercise_order.append(key)
+            grouped[key].append(r)
+
+        groups = []
+        for exercise_name in exercise_order:
+            ranges_for_ex = grouped[exercise_name]
+            specified_exercise = exercise_name.lower().strip()
+            user_stat = (
+                UserStatistic.query
+                .filter(UserStatistic.user_id == current_user.id)
+                .filter(func.lower(UserStatistic.exercise) == specified_exercise)
+                .order_by(UserStatistic.date.desc(), UserStatistic.id.desc())
                 .first()
-            for r in ex_ranges:
-                
-                if user_stat and user_stat.weight:
-                    weight = round(user_stat.weight * (r.value/100) , 1)
-                    result.append(f"{r.value}% @{weight}kg")
-            
-            return {
+            )
+
+            formatted_ranges = []
+            if user_stat and user_stat.weight:
+                for r in ranges_for_ex:
+                    weight = round(user_stat.weight * (r.value / 100), 1)
+                    formatted_ranges.append(f"{r.value}% @{weight}kg")
+
+            groups.append({
                 'user_exercise': user_stat.exercise if user_stat else None,
                 'user_weight': user_stat.weight if user_stat else None,
-                'exercise': ex_ranges[0].exercise if ex_ranges else '',
-                'ranges': result
-            }
-        else:
-            return None
+                'exercise': exercise_name,
+                'ranges': formatted_ranges
+            })
+
+        return groups
 
 class Range(db.Model):  # Usa db.Model, non Base
     id = db.Column(db.Integer, primary_key=True)
@@ -1206,44 +1224,57 @@ def add_workout():
     form = AddWorkoutForm()
 
     if form.validate_on_submit():
-        ranges_payload = None
-        try:
-            ranges_payload = _parse_ranges_input(form.ranges.data)
-        except ValueError as exc:
-            flash(str(exc), 'danger')
-            return render_template('add_workout.html',
-                                   title=('Add Workout'),
-                                   user=current_user,
-                                   form=form)
+
+        payloads = []
+
+        for field in (form.ranges1, form.ranges2, form.ranges3):
+            raw = _parse_str(field.data)
+            if raw:
+                try:
+                    payloads.append(_parse_ranges_input(raw))
+                except ValueError as exc:
+                    flash(str(exc), 'danger')
+                    return render_template(
+                        'add_workout.html',
+                        title='Add Workout',
+                        user=current_user,
+                        form=form
+                    )
+
         w = Workout(
             date=form.date.data,
             name=form.name.data,
             description=form.description.data,
             user_id=current_user.id
         )
+
         current_user.total_workouts_added += 1
         db.session.add(w)
-        if ranges_payload:
-            db.session.flush()
-            for order_index, range_value in enumerate(ranges_payload["ranges"]):
-                r = Range(
-                    value=range_value,
-                    exercise=ranges_payload["exercise"],
+        db.session.flush()  # serve per ottenere w.id
+
+        order_index = 0
+        for payload in payloads:
+            for value in payload["ranges"]:
+                db.session.add(Range(
+                    value=value,
+                    exercise=payload["exercise"],
                     order=order_index,
                     workout_id=w.id
-                )
-                db.session.add(r)
+                ))
+                order_index += 1
+
         db.session.commit()
+
         flash('Workout inserito con successo!', 'success')
         logger(current_user.id, 'New workout created')
         return redirect(url_for('dashboard'))
 
-    return render_template('add_workout.html',
-                           title=('Add Workout'),
-                           user=current_user,
-                           form=form)
-
-
+    return render_template(
+        'add_workout.html',
+        title='Add Workout',
+        user=current_user,
+        form=form
+    )
 
 @app.route('/workout/week/add', methods=['GET', 'POST'])
 @login_required
@@ -1263,7 +1294,23 @@ def add_weekly_workouts():
                 )
                 db.session.add(w)
                 # Aggiungi i ranges se presenti
-                if w_data.get("exercise_range") and w_data.get("ranges"):
+                range_groups = w_data.get("range_groups") or []
+                if range_groups:
+                    db.session.flush()  # Ottieni l'ID del workout appena creato
+                    for group_index, group in enumerate(range_groups):
+                        exercise_name = group.get("exercise")
+                        ranges_values = group.get("ranges") or []
+                        if not exercise_name or not ranges_values:
+                            continue
+                        for order_index, range_value in enumerate(ranges_values):
+                            r = Range(
+                                value=range_value,
+                                exercise=exercise_name,
+                                order=group_index * 100 + order_index,  # mantieni l'ordine tra gruppi
+                                workout_id=w.id
+                            )
+                            db.session.add(r)
+                elif w_data.get("exercise_range") and w_data.get("ranges"):
                     db.session.flush()  # Ottieni l'ID del workout appena creato
                     for order_index, range_value in enumerate(w_data.get("ranges", [])):
                         r = Range(
@@ -1277,7 +1324,7 @@ def add_weekly_workouts():
 
             db.session.commit()
             flash('Workout settimanali inseriti con successo!', 'success')
-            logger(current_user.id, 'Weekly workouts created')
+            logger(current_user.id, 'Weekly workouts created'+'\n---'+ form.week_text.data +'\n---')
             return redirect(url_for('dashboard'))
         except Exception as e:
             db.session.rollback()
@@ -1307,52 +1354,85 @@ def delete_workout(id):
 @login_required
 def edit_workout(id):
     w = Workout.query.get_or_404(id)
+
     if w.user_id != current_user.id and not current_user.is_superuser:
         abort(403)
+
     form = UpdateWorkoutForm()
+
     if form.validate_on_submit():
-        ranges_raw = _parse_str(form.ranges.data)
-        ranges_payload = None
-        if ranges_raw is not None:
-            try:
-                ranges_payload = _parse_ranges_input(form.ranges.data)
-            except ValueError as exc:
-                flash(str(exc), 'danger')
-                return render_template('edit_workout.html',
-                                       title=('Edit Workout'),
-                                       form=form,
-                                       workout=w)
+
+        payloads = []
+
+        for field in (form.ranges1, form.ranges2, form.ranges3):
+            raw = _parse_str(field.data)
+            if raw:
+                try:
+                    payloads.append(_parse_ranges_input(raw))
+                except ValueError as exc:
+                    flash(str(exc), 'danger')
+                    return render_template(
+                        'edit_workout.html',
+                        title='Edit Workout',
+                        form=form,
+                        workout=w
+                    )
+
+        # aggiorna campi base
         w.date = form.date.data
         w.name = form.name.data
         w.description = form.description.data
-        Range.query.filter_by(workout_id=w.id).delete(synchronize_session=False)
-        if ranges_payload:
-            for order_index, range_value in enumerate(ranges_payload["ranges"]):
-                r = Range(
-                    value=range_value,
-                    exercise=ranges_payload["exercise"],
+
+        # cancella tutti i range esistenti
+        Range.query.filter_by(workout_id=w.id).delete(
+            synchronize_session=False
+        )
+
+        # reinserisci i range
+        order_index = 0
+        for payload in payloads:
+            for value in payload["ranges"]:
+                db.session.add(Range(
+                    value=value,
+                    exercise=payload["exercise"],
                     order=order_index,
                     workout_id=w.id
-                )
-                db.session.add(r)
+                ))
+                order_index += 1
+
         db.session.commit()
+
         flash('Workout aggiornato con successo!', 'success')
-        logger(current_user.id, 'Modified workout '+w.date.strftime('%d-%m-%Y'))
+        logger(current_user.id, f'Modified workout {w.date:%d-%m-%Y}')
         return redirect(url_for('dashboard'))
+
     elif request.method == 'GET':
+
         form.date.data = w.date
         form.name.data = w.name
         form.description.data = w.description
-        if w.ranges:
-            range_values = ",".join(str(r.value) for r in w.ranges)
-            form.ranges.data = f"{range_values}@{w.ranges[0].exercise}"
 
-    return render_template('edit_workout.html',
-                           title=('Edit Workout'),
-                           form=form,
-                           workout=w)
+        # ricostruisci i campi ranges
+        grouped = defaultdict(list)
+        for r in w.ranges:
+            grouped[r.exercise].append((r.order, r.value))
 
+        reconstructed = []
+        for exercise, items in grouped.items():
+            items.sort(key=lambda x: x[0])
+            values = [str(v) for _, v in items]
+            reconstructed.append(f"{','.join(values)}@{exercise}")
 
+        form.ranges1.data = reconstructed[0] if len(reconstructed) > 0 else ''
+        form.ranges2.data = reconstructed[1] if len(reconstructed) > 1 else ''
+        form.ranges3.data = reconstructed[2] if len(reconstructed) > 2 else ''
+
+    return render_template(
+        'edit_workout.html',
+        title='Edit Workout',
+        form=form,
+        workout=w
+    )
 @app.route('/performance/add/<int:id>', methods=['GET', 'POST'])
 @login_required
 def add_performance(id):
