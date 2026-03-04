@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h1 class="text-center mb-4">Delete Workouts</h1>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="POST" onsubmit="return confirm('Confermi la cancellazione degli allenamenti selezionati?');">
+        {{ form.csrf_token() }}
+
+        <div class="mb-4">
+          <label for="{{ form.week_date.id }}" class="form-label text-center d-block">
+            Selezione Week
+          </label>
+          {{ form.week_date(class_="form-control text-center") }}
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+          {% for option in day_options %}
+          <label
+            class="px-3 py-2 rounded text-center"
+            style="border: 1px solid #fff; cursor: pointer; min-width: {% if option.code == 'all' %}88px{% else %}52px{% endif %};"
+            title="{{ option.label }}"
+          >
+            <input
+              class="form-check-input me-1 day-checkbox"
+              type="checkbox"
+              name="days"
+              value="{{ option.code }}"
+              {% if option.code == 'all' %}id="day-all"{% endif %}
+            >
+            <span class="fw-bold">{{ option.short }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-center">
+          {{ form.submit(class_="btn-delete", style="min-width: 110px;") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const allCheckbox = document.getElementById('day-all');
+    const dayCheckboxes = Array.from(document.querySelectorAll('.day-checkbox')).filter(function (checkbox) {
+      return checkbox !== allCheckbox;
+    });
+
+    if (!allCheckbox) return;
+
+    allCheckbox.addEventListener('change', function () {
+      dayCheckboxes.forEach(function (checkbox) {
+        checkbox.checked = allCheckbox.checked;
+      });
+    });
+
+    dayCheckboxes.forEach(function (checkbox) {
+      checkbox.addEventListener('change', function () {
+        allCheckbox.checked = dayCheckboxes.every(function (item) {
+          return item.checked;
+        });
+      });
+    });
+  })();
+</script>
+
+<div class="bottom-bar">
+  <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}

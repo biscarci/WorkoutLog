@@ -106,6 +106,11 @@ class BulkDeleteStatsForm(FlaskForm):
     submit = SubmitField('Delete Selected')
 
 
+class DeleteWorkoutsByDayForm(FlaskForm):
+    week_date = DateField('Picker selezione data', validators=[DataRequired()], default=datetime.utcnow)
+    submit = SubmitField('Elimina')
+
+
 class UpdateProfileForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired(), Length(min=2, max=50)])
     surname = StringField('Surname', validators=[DataRequired(), Length(min=2, max=50)])

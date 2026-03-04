@@ -25,7 +25,7 @@ from sqlalchemy import func, and_
 from collections import defaultdict
 
 # Importazioni del progetto locale
-from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, EditPerformanceForm, LoginForm, PerformanceForm,
+from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, DeleteWorkoutsByDayForm, EditPerformanceForm, LoginForm, PerformanceForm,
                    RegistrationForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
 from utils import (allowed_file, 
                    random_motivational_phrase, random_rest_message, parse_week_text)
@@ -541,6 +541,93 @@ def admin_users():
         users=users,
     )
 
+
+@app.route('/admin/workouts/delete-by-day', methods=['GET', 'POST'])
+@login_required
+@superuser_required
+def admin_delete_workouts_by_day():
+    form = DeleteWorkoutsByDayForm()
+    day_options = [
+        {'code': 'mon', 'short': 'L', 'label': 'Lunedi', 'weekday': 0},
+        {'code': 'tue', 'short': 'M', 'label': 'Martedi', 'weekday': 1},
+        {'code': 'wed', 'short': 'M', 'label': 'Mercoledi', 'weekday': 2},
+        {'code': 'thu', 'short': 'G', 'label': 'Giovedi', 'weekday': 3},
+        {'code': 'fri', 'short': 'V', 'label': 'Venerdi', 'weekday': 4},
+        {'code': 'sat', 'short': 'S', 'label': 'Sabato', 'weekday': 5},
+        {'code': 'sun', 'short': 'D', 'label': 'Domenica', 'weekday': 6},
+        {'code': 'all', 'short': 'TUTTI', 'label': 'Tutti i giorni', 'weekday': None},
+    ]
+
+    week_date_raw = (request.args.get('week_date') or '').strip()
+    if week_date_raw:
+        try:
+            selected_week_date = datetime.strptime(week_date_raw, '%Y-%m-%d').date()
+        except ValueError:
+            selected_week_date = datetime.utcnow().date()
+    else:
+        selected_week_date = datetime.utcnow().date()
+
+    if request.method == 'POST' and form.week_date.data:
+        selected_week_date = form.week_date.data
+
+    week_start_date = selected_week_date - timedelta(days=selected_week_date.weekday())
+    week_start = datetime.combine(week_start_date, datetime.min.time())
+    week_end = week_start + timedelta(days=7)
+    form.week_date.data = week_start_date
+
+    week_workouts = (
+        Workout.query
+        .filter(Workout.date.isnot(None), Workout.date >= week_start, Workout.date < week_end)
+        .all()
+    )
+
+    if form.validate_on_submit():
+        selected_codes = set(request.form.getlist('days'))
+        if 'all' in selected_codes:
+            selected_codes = {option['code'] for option in day_options if option['weekday'] is not None}
+
+        selected_days = [option for option in day_options if option['weekday'] is not None and option['code'] in selected_codes]
+        if not selected_days:
+            flash('Seleziona almeno un giorno.', 'warning')
+            return redirect(url_for('admin_delete_workouts_by_day', week_date=week_start_date.isoformat()))
+
+        selected_weekdays = {option['weekday'] for option in selected_days}
+        workout_ids = [
+            workout.id
+            for workout in week_workouts
+            if workout.date.weekday() in selected_weekdays
+        ]
+
+        if not workout_ids:
+            flash('Nessun allenamento trovato per i giorni selezionati.', 'info')
+            return redirect(url_for('admin_delete_workouts_by_day', week_date=week_start_date.isoformat()))
+
+        try:
+            WorkoutPerformance.query.filter(WorkoutPerformance.workout_id.in_(workout_ids)).delete(synchronize_session=False)
+            Range.query.filter(Range.workout_id.in_(workout_ids)).delete(synchronize_session=False)
+            Workout.query.filter(Workout.id.in_(workout_ids)).delete(synchronize_session=False)
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash('Errore durante la cancellazione degli allenamenti.', 'danger')
+            return redirect(url_for('admin_delete_workouts_by_day', week_date=week_start_date.isoformat()))
+
+        selected_labels = ', '.join(option['label'] for option in selected_days)
+        flash(f'{len(workout_ids)} allenamenti eliminati con successo.', 'success')
+        logger(current_user.id, f'Bulk deleted workouts for week {week_start_date.isoformat()} and days: {selected_labels}')
+        return redirect(url_for('admin_delete_workouts_by_day', week_date=week_start_date.isoformat()))
+
+    if request.method == 'POST':
+        flash('Seleziona una data valida.', 'warning')
+        return redirect(url_for('admin_delete_workouts_by_day', week_date=week_start_date.isoformat()))
+
+    return render_template(
+        'admin_delete_workouts_by_day.html',
+        title='Delete Workouts By Day',
+        form=form,
+        day_options=day_options,
+    )
+
 @app.route('/admin/manage_user/<int:id>', methods=['POST'])
 @login_required
 @superuser_required
@@ -1025,6 +1112,8 @@ def import_csv():
     }
     skipped = 0
     user_id_map = {}
+    workout_id_map = {}
+    performance_id_map = {}
 
     try:
         # Import order matters for foreign keys.
@@ -1063,33 +1152,49 @@ def import_csv():
                 skipped += 1
                 continue
 
+            name = _parse_str(row.get('name'))
+            surname = _parse_str(row.get('surname'))
+            created_at = _parse_datetime(row.get('created_at'))
+            last_login = _parse_datetime(row.get('last_login'))
+            is_superuser = _parse_bool(row.get('is_superuser'))
+            is_enabled = _parse_bool(row.get('is_enabled'))
+            total_workouts_added = _parse_int(row.get('total_workouts_added'))
+
+            if (
+                not is_new
+                and (username is None or user.username == username)
+                and (email is None or user.email == email)
+                and (password is None or user.password == password)
+                and (name is None or user.name == name)
+                and (surname is None or user.surname == surname)
+                and (created_at is None or user.created_at == created_at)
+                and (last_login is None or user.last_login == last_login)
+                and (is_superuser is None or user.is_superuser == is_superuser)
+                and (is_enabled is None or user.is_enabled == is_enabled)
+                and (total_workouts_added is None or user.total_workouts_added == total_workouts_added)
+            ):
+                user_id_map[user_id] = user.id
+                skipped += 1
+                continue
+
             if username is not None:
                 user.username = username
             if email is not None:
                 user.email = email
             if password is not None:
                 user.password = password
-            name = _parse_str(row.get('name'))
-            surname = _parse_str(row.get('surname'))
             if name is not None:
                 user.name = name
             if surname is not None:
                 user.surname = surname
-
-            created_at = _parse_datetime(row.get('created_at'))
             if created_at is not None:
                 user.created_at = created_at
-            last_login = _parse_datetime(row.get('last_login'))
             if last_login is not None:
                 user.last_login = last_login
-
-            is_superuser = _parse_bool(row.get('is_superuser'))
             if is_superuser is not None:
                 user.is_superuser = is_superuser
-            is_enabled = _parse_bool(row.get('is_enabled'))
             if is_enabled is not None:
                 user.is_enabled = is_enabled
-            total_workouts_added = _parse_int(row.get('total_workouts_added'))
             if total_workouts_added is not None:
                 user.total_workouts_added = total_workouts_added
 
@@ -1103,7 +1208,23 @@ def import_csv():
             if user_id is not None:
                 user_id = user_id_map.get(user_id, user_id)
             name = _parse_str(row.get('name'))
+            workout_date = _parse_datetime(row.get('date'))
+            workout_description = _parse_str(row.get('description'))
             if workout_id is None or user_id is None or not name:
+                skipped += 1
+                continue
+            existing_duplicate = (
+                Workout.query
+                .filter(
+                    Workout.user_id == user_id,
+                    Workout.date == workout_date,
+                    Workout.name == name,
+                    Workout.description == workout_description,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
+                workout_id_map[workout_id] = existing_duplicate.id
                 skipped += 1
                 continue
             workout = db.session.get(Workout, workout_id)
@@ -1111,18 +1232,34 @@ def import_csv():
                 workout = Workout(id=workout_id)
             workout.user_id = user_id
             workout.name = name
-            workout.date = _parse_datetime(row.get('date'))
-            workout.description = _parse_str(row.get('description'))
+            workout.date = workout_date
+            workout.description = workout_description
             db.session.add(workout)
+            workout_id_map[workout_id] = workout.id
             counts['workout'] += 1
 
         for row in rows_by_table.get('range', []):
             range_id = _parse_int(row.get('id'))
             workout_id = _parse_int(row.get('workout_id'))
+            if workout_id is not None:
+                workout_id = workout_id_map.get(workout_id, workout_id)
             value = _parse_int(row.get('value'))
             exercise = _parse_str(row.get('exercise'))
             range_order = _parse_int(row.get('range_order'))
             if range_id is None or workout_id is None or value is None or not exercise or range_order is None:
+                skipped += 1
+                continue
+            existing_duplicate = (
+                Range.query
+                .filter(
+                    Range.workout_id == workout_id,
+                    Range.value == value,
+                    Range.exercise == exercise,
+                    Range.order == range_order,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
                 skipped += 1
                 continue
             r = db.session.get(Range, range_id)
@@ -1140,23 +1277,54 @@ def import_csv():
             user_id = _parse_int(row.get('user_id'))
             if user_id is not None:
                 user_id = user_id_map.get(user_id, user_id)
+            performance_date = _parse_datetime(row.get('date'))
+            performance_description = _parse_str(row.get('description'))
             if performance_id is None or user_id is None:
+                skipped += 1
+                continue
+            existing_duplicate = (
+                Performance.query
+                .filter(
+                    Performance.user_id == user_id,
+                    Performance.date == performance_date,
+                    Performance.description == performance_description,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
+                performance_id_map[performance_id] = existing_duplicate.id
                 skipped += 1
                 continue
             performance = db.session.get(Performance, performance_id)
             if performance is None:
                 performance = Performance(id=performance_id)
             performance.user_id = user_id
-            performance.date = _parse_datetime(row.get('date'))
-            performance.description = _parse_str(row.get('description'))
+            performance.date = performance_date
+            performance.description = performance_description
             db.session.add(performance)
+            performance_id_map[performance_id] = performance.id
             counts['performance'] += 1
 
         for row in rows_by_table.get('workout_performance', []):
             link_id = _parse_int(row.get('id'))
             workout_id = _parse_int(row.get('workout_id'))
+            if workout_id is not None:
+                workout_id = workout_id_map.get(workout_id, workout_id)
             performance_id = _parse_int(row.get('performance_id'))
+            if performance_id is not None:
+                performance_id = performance_id_map.get(performance_id, performance_id)
             if link_id is None or workout_id is None or performance_id is None:
+                skipped += 1
+                continue
+            existing_duplicate = (
+                WorkoutPerformance.query
+                .filter(
+                    WorkoutPerformance.workout_id == workout_id,
+                    WorkoutPerformance.performance_id == performance_id,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
                 skipped += 1
                 continue
             link = db.session.get(WorkoutPerformance, link_id)
@@ -1172,17 +1340,35 @@ def import_csv():
             user_id = _parse_int(row.get('user_id'))
             if user_id is not None:
                 user_id = user_id_map.get(user_id, user_id)
+            stat_date = _parse_datetime(row.get('date'))
+            stat_exercise = _parse_str(row.get('exercise'))
+            stat_weight = _parse_float(row.get('weight'))
+            stat_reps = _parse_int(row.get('reps'))
             if stat_id is None or user_id is None:
+                skipped += 1
+                continue
+            existing_duplicate = (
+                UserStatistic.query
+                .filter(
+                    UserStatistic.user_id == user_id,
+                    UserStatistic.date == stat_date,
+                    UserStatistic.exercise == stat_exercise,
+                    UserStatistic.weight == stat_weight,
+                    UserStatistic.reps == stat_reps,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
                 skipped += 1
                 continue
             stat = db.session.get(UserStatistic, stat_id)
             if stat is None:
                 stat = UserStatistic(id=stat_id)
             stat.user_id = user_id
-            stat.date = _parse_datetime(row.get('date'))
-            stat.exercise = _parse_str(row.get('exercise'))
-            stat.weight = _parse_float(row.get('weight'))
-            stat.reps = _parse_int(row.get('reps'))
+            stat.date = stat_date
+            stat.exercise = stat_exercise
+            stat.weight = stat_weight
+            stat.reps = stat_reps
             db.session.add(stat)
             counts['user_statistic'] += 1
 
@@ -1191,13 +1377,27 @@ def import_csv():
             if log_id is None:
                 skipped += 1
                 continue
+            log_user = _parse_str(row.get('log_user')) or _parse_str(row.get('username'))
+            log_action = _parse_str(row.get('action'))
+            log_timestamp = _parse_datetime(row.get('timestamp'))
+            existing_duplicate = (
+                Log.query
+                .filter(
+                    Log.user == log_user,
+                    Log.action == log_action,
+                    Log.timestamp == log_timestamp,
+                )
+                .first()
+            )
+            if existing_duplicate is not None:
+                skipped += 1
+                continue
             log_entry = db.session.get(Log, log_id)
             if log_entry is None:
                 log_entry = Log(id=log_id)
-            log_user = _parse_str(row.get('log_user')) or _parse_str(row.get('username'))
             log_entry.user = log_user
-            log_entry.action = _parse_str(row.get('action'))
-            log_entry.timestamp = _parse_datetime(row.get('timestamp'))
+            log_entry.action = log_action
+            log_entry.timestamp = log_timestamp
             db.session.add(log_entry)
             counts['log'] += 1
 
@@ -1212,7 +1412,7 @@ def import_csv():
         'Import CSV completato '
         f"(user {counts['user']}, workout {counts['workout']}, range {counts['range']}, "
         f"performance {counts['performance']}, link {counts['workout_performance']}, "
-        f"stats {counts['user_statistic']}, log {counts['log']}, skipped {skipped}).",
+        f"stats {counts['user_statistic']}, log {counts['log']}, skipped {skipped} tra duplicati o righe non valide).",
         'success'
     )
     return redirect(url_for('dashboard'))
