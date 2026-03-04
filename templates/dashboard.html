@@ -48,7 +48,13 @@
                     <a href="{{ url_for('user_stats') }}" role="button">Inserisci 1RM</a>
                   </small>
                 {% else %}
-                  <small class="text-secondary">In base al tuo 1RM di {{ group['user_exercise'] }} a {{ group['user_weight'] }} Kg</small>
+                  <small class="text-secondary">In base al tuo RM di {{ group['user_exercise'] }} 
+                    {% if group['user_exercise'] == "Dips" %} di {% else %} a {% endif %}
+                    
+                    {{ group['user_weight'] }} 
+                  
+                    {% if group['user_exercise'] == "Dips" %} reps {% else %} Kg {% endif %}
+                  </small>
                   <ul class="list-group list-group-horizontal">
                     {% for range in group['ranges'] %}
                       <li 
@@ -56,6 +62,7 @@
                         style="border: 0px!important"
                       >
                         {{ range }}
+                        {% if group['user_exercise'] == "Dips" %} reps {% else %} Kg {% endif %}
                       </li>
                     {% endfor %}
                   </ul>

@@ -181,7 +181,7 @@ class Workout(db.Model):
             if user_stat and user_stat.weight:
                 for r in ranges_for_ex:
                     weight = round(user_stat.weight * (r.value / 100), 1)
-                    formatted_ranges.append(f"{r.value}% @{weight}kg")
+                    formatted_ranges.append(f"{r.value}% @{weight}")
 
             groups.append({
                 'user_exercise': user_stat.exercise if user_stat else None,

@@ -74,6 +74,7 @@ movement_choices = [
     ('Front Squat', 'Front Squat'),
     ('Deadlift', 'Deadlift'),
     ('Bench Press', 'Bench Press'),
+    ('Dips', 'Dips'),
     ('Clean & Jerk', 'Clean & Jerk'),
     ('Power Clean', 'Power Clean'),
     ('Squat Clean', 'Squat Clean'),
@@ -96,7 +97,7 @@ movement_choices = [
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     exercise = SelectField("Exercise", choices= movement_choices, validators=[DataRequired()])
-    weight = FloatField('Weight (Kg)', validators=[Optional()])
+    weight = FloatField('Weight (Kg) / Reps', validators=[Optional()])
     #reps = IntegerField('Reps', validators=[Optional()], default=1)
     submit = SubmitField('Save')
 
