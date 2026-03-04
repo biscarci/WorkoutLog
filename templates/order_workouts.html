@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h1 class="text-center">Ordina Workouts</h1>
+
+  <p class="text-center text-secondary mb-4">
+    {{ selected_date.strftime('%d/%m/%Y') }}
+  </p>
+
+  {% if workouts %}
+  <div class="table-responsive">
+    <table class="table table-dark table-striped align-middle">
+      <thead>
+        <tr>
+          <th style="width: 60px;">#</th>
+          <th>Workout</th>
+          <th class="text-end" style="width: 120px;">Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for workout in workouts %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ workout.name }}</td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-2">
+              <form method="POST" action="{{ url_for('move_workout_order', id=workout.id) }}">
+                <input type="hidden" name="direction" value="up">
+                <button class="btn btn-action" type="submit" aria-label="Sposta su" {% if loop.first %}disabled{% endif %}>
+                  <i class="bi bi-arrow-up"></i>
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('move_workout_order', id=workout.id) }}">
+                <input type="hidden" name="direction" value="down">
+                <button class="btn btn-action" type="submit" aria-label="Sposta giu" {% if loop.last %}disabled{% endif %}>
+                  <i class="bi bi-arrow-down"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-center mb-0">Nessun workout da ordinare per questa data.</p>
+  {% endif %}
+
+  <div class="d-flex justify-content-center mt-4">
+    <a class="btn btn-outline-primary" href="{{ url_for('select_workout_date', day=selected_date.day, month=selected_date.month, year=selected_date.year) }}" role="button">
+      Torna al giorno
+    </a>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <a class="btn btn-outline-primary btn-block" href="{{ url_for('dashboard') }}" role="button" aria-expanded="false">Dashboard</a>
+</div>
+{% endblock %}

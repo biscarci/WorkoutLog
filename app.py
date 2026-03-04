@@ -124,6 +124,7 @@ class User(UserMixin, db.Model):
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
     name = db.Column(db.Text, nullable=False)  
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -371,6 +372,44 @@ def _parse_ranges_input(value):
     if not ranges:
         raise ValueError('Nessun range valido trovato.')
     return {"exercise": exercise, "ranges": ranges}
+
+
+def _get_day_bounds(value):
+    target_date = value.date() if isinstance(value, datetime) else value
+    start_dt = datetime.combine(target_date, datetime.min.time())
+    return start_dt, start_dt + timedelta(days=1)
+
+
+def _get_next_workout_display_order(workout_date):
+    if workout_date is None:
+        return 0
+    day_start, day_end = _get_day_bounds(workout_date)
+    current_max = (
+        db.session.query(func.max(Workout.display_order))
+        .filter(Workout.date.isnot(None), Workout.date >= day_start, Workout.date < day_end)
+        .scalar()
+    )
+    return (current_max or 0) + 1
+
+
+def _normalize_workout_display_order_for_day(workout_date):
+    if workout_date is None:
+        return []
+    day_start, day_end = _get_day_bounds(workout_date)
+    workouts = (
+        Workout.query
+        .filter(Workout.date.isnot(None), Workout.date >= day_start, Workout.date < day_end)
+        .order_by(Workout.display_order.asc(), Workout.id.asc())
+        .all()
+    )
+    changed = False
+    for index, workout in enumerate(workouts, start=1):
+        if workout.display_order != index:
+            workout.display_order = index
+            changed = True
+    if changed:
+        db.session.commit()
+    return workouts
 
 def superuser_required(f):
     @wraps(f)
@@ -896,7 +935,7 @@ def dashboard():
     owner = current_user
     workouts = Workout.query.filter(
         Workout.date >= start_date, Workout.date < end_date
-    ).order_by(Workout.date.asc()).all()
+    ).order_by(Workout.date.asc(), Workout.display_order.asc(), Workout.id.asc()).all()
 
     start_day_week = start_date - timedelta(days=start_date.weekday())
     
@@ -933,7 +972,7 @@ def select_workout_date(day, month, year):
 
     workouts = Workout.query.filter(
         Workout.date >= start_date, Workout.date < end_date
-    ).order_by(Workout.date.asc()).all()
+    ).order_by(Workout.date.asc(), Workout.display_order.asc(), Workout.id.asc()).all()
 
     start_day_week = start_date - timedelta(days=start_date.weekday())
 
@@ -957,6 +996,66 @@ def select_workout_date(day, month, year):
                            weekdays=weekdays,
                            user=current_user)
 
+
+@app.route('/workouts/order', methods=['GET'])
+@login_required
+@superuser_required
+def order_workouts():
+    year = request.args.get('year', default=datetime.now().year, type=int)
+    month = request.args.get('month', default=datetime.now().month, type=int)
+    day = request.args.get('day', default=datetime.now().day, type=int)
+
+    try:
+        selected_date = datetime(year, month, day)
+    except ValueError:
+        selected_date = datetime(year, month, 1)
+
+    workouts = _normalize_workout_display_order_for_day(selected_date.date())
+
+    return render_template(
+        'order_workouts.html',
+        title='Ordina Workouts',
+        workouts=workouts,
+        selected_date=selected_date,
+    )
+
+
+@app.route('/workouts/order/move/<int:id>', methods=['POST'])
+@login_required
+@superuser_required
+def move_workout_order(id):
+    workout = Workout.query.get_or_404(id)
+    if workout.date is None:
+        abort(400)
+
+    direction = (_parse_str(request.form.get('direction')) or '').lower()
+    workout_date = workout.date.date() if isinstance(workout.date, datetime) else workout.date
+    workouts = _normalize_workout_display_order_for_day(workout_date)
+
+    current_index = next((index for index, item in enumerate(workouts) if item.id == workout.id), None)
+    if current_index is None:
+        abort(404)
+
+    swap_index = None
+    if direction == 'up' and current_index > 0:
+        swap_index = current_index - 1
+    elif direction == 'down' and current_index < len(workouts) - 1:
+        swap_index = current_index + 1
+
+    if swap_index is not None:
+        other_workout = workouts[swap_index]
+        workout.display_order, other_workout.display_order = other_workout.display_order, workout.display_order
+        db.session.commit()
+
+    return redirect(
+        url_for(
+            'order_workouts',
+            day=workout_date.day,
+            month=workout_date.month,
+            year=workout_date.year,
+        )
+    )
+
 @app.route('/export/csv', methods=['GET'])
 @login_required
 @superuser_required
@@ -976,6 +1075,7 @@ def export_csv():
         'is_enabled',
         'total_workouts_added',
         'date',
+        'display_order',
         'description',
         'workout_id',
         'performance_id',
@@ -1022,6 +1122,7 @@ def export_csv():
             id=workout.id,
             user_id=workout.user_id,
             date=workout.date,
+            display_order=workout.display_order,
             name=workout.name,
             description=workout.description,
         )
@@ -1209,6 +1310,7 @@ def import_csv():
                 user_id = user_id_map.get(user_id, user_id)
             name = _parse_str(row.get('name'))
             workout_date = _parse_datetime(row.get('date'))
+            display_order = _parse_int(row.get('display_order'))
             workout_description = _parse_str(row.get('description'))
             if workout_id is None or user_id is None or not name:
                 skipped += 1
@@ -1233,6 +1335,7 @@ def import_csv():
             workout.user_id = user_id
             workout.name = name
             workout.date = workout_date
+            workout.display_order = display_order if display_order is not None else workout.display_order or 0
             workout.description = workout_description
             db.session.add(workout)
             workout_id_map[workout_id] = workout.id
@@ -1443,6 +1546,7 @@ def add_workout():
 
         w = Workout(
             date=form.date.data,
+            display_order=_get_next_workout_display_order(form.date.data),
             name=form.name.data,
             description=form.description.data,
             user_id=current_user.id
@@ -1485,13 +1589,20 @@ def add_weekly_workouts():
     if form.validate_on_submit():
         try:
             parsed = parse_week_text(form.week_text.data)
+            next_orders = {}
             for w_data in parsed["workouts"]:
+                workout_date = w_data["date"]
+                date_key = workout_date.isoformat() if workout_date else None
+                if date_key not in next_orders:
+                    next_orders[date_key] = _get_next_workout_display_order(workout_date)
                 w = Workout(
-                    date=w_data["date"],
+                    date=workout_date,
+                    display_order=next_orders[date_key],
                     name=w_data['name'],
                     description="\n".join(w_data["description"]),
                     user_id=current_user.id
                 )
+                next_orders[date_key] += 1
                 db.session.add(w)
                 # Aggiungi i ranges se presenti
                 range_groups = w_data.get("range_groups") or []
@@ -1579,7 +1690,11 @@ def edit_workout(id):
                     )
 
         # aggiorna campi base
-        w.date = form.date.data
+        previous_date = w.date.date() if isinstance(w.date, datetime) else w.date
+        new_date = form.date.data
+        if previous_date != new_date:
+            w.display_order = _get_next_workout_display_order(new_date)
+        w.date = new_date
         w.name = form.name.data
         w.description = form.description.data
 

@@ -112,6 +112,14 @@
       </div>
     {% endif %}
   {% endif %}
+
+  {% if user.is_superuser and workouts %}
+  <div class="d-flex justify-content-center align-items-center mt-4">
+    <a class="btn btn-outline-primary" style="min-width: 170px;" href="{{ url_for('order_workouts', day=day, month=month, year=year) }}" role="button">
+      Ordina Workouts
+    </a>
+  </div>
+  {% endif %}
 </div>
 
 
