@@ -14,17 +14,19 @@ def allowed_file(filename):
 
 def random_motivational_phrase():
     common_phrases = [
+        "RINAL METTI LO SCORE!",
         "SÌ VOLA",
         "LE COSE VANNO BENE ",
         "FAJ PAUR 🤌🏽",
         "PAZZESCO ! ",
         "TUTTO NELLA SERENITÀ",
-        "NON SENTO NIENTE",
         "SIUUP",
         "STA SUCCENNDO",
-        "NELLA SIUP LIFE"
+        "NELLA SIUP LIFE",
+        "JUST WORK NOT PLAY"
     ]
     other_phrases = [
+        "NON SENTO NIENTE",
         "RESPIRA DOPO",
         "MUOVITI",
         "NON MOLLARE",
