@@ -218,6 +218,59 @@
     color: #fff;
   }
 
+  .round-counter {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-top: 14px;
+    width: 100%;
+  }
+
+  .round-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .round-num {
+    font-size: clamp(2.8rem, 12vw, 4rem);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+    min-width: 3ch;
+    text-align: center;
+  }
+
+  .btn-round {
+    background: #000;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .btn-round:active { background: #fff; color: #000; }
+
+  .btn-round-minus {
+    border-color: #333;
+    color: #444;
+  }
+
+  .btn-round-minus:active { background: #333; color: #fff; }
+
   .container.timer-wrap {
     border: none !important;
     padding: 0 !important;
@@ -245,14 +298,14 @@
   <div class="end-overlay" id="endOverlay" style="display:none;">
     <div class="end-title" id="endTitle">FINITO!</div>
     <div class="end-time" id="endTime">00:00</div>
-    <button class="btn btn-outline-primary fw-bold mb-3 px-4 py-3" onclick="openSaveModal()"
+    <button class="btn btn-outline-primary fw-bold mb-3 px-4 py-3" id="btnSaveScore" onclick="openSaveModal()"
             style="font-size:1rem;letter-spacing:0.1em;">
       SALVA SCORE
     </button>
     <a href="{{ url_for('add_performance', id=workout.id) }}"
-       class="btn btn-outline-primary px-4 py-2"
-       style="font-size:0.9rem;">
-      Torna al workout
+       class="btn btn-outline-primary fw-bold px-4 py-3"
+       style="font-size:1rem;letter-spacing:0.1em;">
+      TORNA AL WORKOUT
     </a>
   </div>
 
@@ -267,6 +320,18 @@
         <div class="timer-progress-fill" id="progressFill"></div>
       </div>
       <div class="timer-elapsed" id="elapsedEl">Trascorso: 00:00</div>
+
+      <!-- Round counter (AMRAP / FOR TIME only) -->
+      <div class="round-counter" id="roundCounter">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div class="round-label">Rounds</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-round btn-round-minus" id="btnRoundMinus" onclick="changeRound(-1)" aria-label="Togli round">−</button>
+            <div class="round-num" id="roundNum">0</div>
+            <button class="btn-round" id="btnRoundPlus" onclick="changeRound(1)" aria-label="Aggiungi round">+</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Workout description + suggested weights -->
@@ -300,9 +365,21 @@
 
 </div>
 
-<!-- Timer controls bar -->
-<div class="timer-bar">
+<!-- Timer controls bar – normale -->
+<div class="timer-bar" id="barNormal">
   <button class="btn-t" id="pauseBtn" onclick="togglePause()">PAUSA</button>
+  <button class="btn-t btn-t-danger" onclick="stopWorkout()">STOP</button>
+</div>
+
+<!-- Timer controls bar – FORZA -->
+<div class="timer-bar" id="barForza" style="display:none;">
+  <button class="btn-t" id="workRestBtn" onclick="toggleWorkRest()">REST</button>
+  <button class="btn-t btn-t-danger" onclick="stopWorkout()">STOP</button>
+</div>
+
+<!-- Timer controls bar – TIMER -->
+<div class="timer-bar" id="barTimer" style="display:none;">
+  <button class="btn-t" onclick="resetTimer()">RESET</button>
   <button class="btn-t btn-t-danger" onclick="stopWorkout()">STOP</button>
 </div>
 
@@ -353,6 +430,30 @@
   var paused = false;
   var done = false;
   var audioCtx = null;
+  var roundCount = 0;
+  var showRounds = false;
+  var isForza = config.type === 'FORZA';
+  var isTimerMode = config.type === 'TIMER';
+  var forzaIsWork = true;
+  var forzaPhaseElapsed = 0;
+  var wakeLock = null;
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (e) {}
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  }
+
+  // Riacquista il wake lock se la pagina torna in primo piano
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && !done && !paused) requestWakeLock();
+  });
 
   /* ── Audio ────────────────────────────────────────────────────── */
   function getCtx() {
@@ -365,10 +466,15 @@
       var ctx = getCtx();
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -6;
+      comp.ratio.value = 4;
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(comp);
+      comp.connect(ctx.destination);
+      osc.type = 'square';
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(vol || 0.4, ctx.currentTime);
+      gain.gain.setValueAtTime(vol || 1.0, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + dur);
@@ -461,14 +567,15 @@
       count--;
       if (count > 0) {
         setNum(count);
-        if (count <= 3) beep(880, 0.12);
+        if (count <= 3) beep(880, 0.15);
       } else {
         cdNum.className = 'cd-go cd-anim';
         cdNum.textContent = 'GO!';
-        beep(1320, 0.5);
+        beep(1320, 0.6);
         clearInterval(interval);
         setTimeout(function () {
           cdOverlay.style.display = 'none';
+          requestWakeLock();
           beginTimer();
         }, 700);
       }
@@ -482,8 +589,69 @@
     cdNum.textContent = n;
   }
 
+  /* ── Round counter ────────────────────────────────────────────── */
+  showRounds = (config.type === 'AMRAP' || config.type === 'FOR TIME' || isForza);
+  if (showRounds) {
+    document.getElementById('roundCounter').style.display = 'flex';
+    if (isForza) {
+      document.getElementById('btnRoundMinus').style.display = 'none';
+      document.getElementById('btnRoundPlus').style.display = 'none';
+    }
+  }
+
+  window.changeRound = function (delta) {
+    roundCount = Math.max(0, roundCount + delta);
+    document.getElementById('roundNum').textContent = roundCount;
+  };
+
+  /* ── FORZA: toggle Work / Rest ────────────────────────────────── */
+  window.toggleWorkRest = function () {
+    forzaIsWork = !forzaIsWork;
+    forzaPhaseElapsed = 0;
+    if (forzaIsWork) {
+      roundCount++;
+      document.getElementById('roundNum').textContent = roundCount;
+      phaseLabel.textContent = 'WORK';
+      phaseLabel.className = 'timer-phase-label';
+      document.getElementById('workRestBtn').textContent = 'REST';
+      beep(1320, 0.3);
+    } else {
+      phaseLabel.textContent = 'REST';
+      phaseLabel.className = 'timer-phase-label rest';
+      document.getElementById('workRestBtn').textContent = 'WORK';
+      beep(880, 0.3);
+    }
+  };
+
+  /* ── TIMER: reset ─────────────────────────────────────────────── */
+  window.resetTimer = function () {
+    totalElapsed = 0;
+    timerDigits.textContent = '00:00';
+    elapsedEl.textContent = 'Trascorso: 00:00';
+  };
+
   /* ── Main timer ───────────────────────────────────────────────── */
   function beginTimer() {
+    if (isForza) {
+      document.getElementById('barNormal').style.display = 'none';
+      document.getElementById('barForza').style.display = 'flex';
+      forzaPhaseElapsed = 0;
+      phaseLabel.textContent = 'WORK';
+      phaseLabel.className = 'timer-phase-label';
+      timerDigits.textContent = '00:00';
+      elapsedEl.textContent = 'Trascorso: 00:00';
+      interval = setInterval(tick, 1000);
+      return;
+    }
+    if (isTimerMode) {
+      document.getElementById('barNormal').style.display = 'none';
+      document.getElementById('barTimer').style.display = 'flex';
+      phaseLabel.textContent = 'TIMER';
+      timerDigits.textContent = '00:00';
+      elapsedEl.textContent = '';
+      interval = setInterval(tick, 1000);
+      return;
+    }
     phaseIdx = 0;
     totalElapsed = 0;
     timeLeft = phases[0].duration;
@@ -494,22 +662,34 @@
 
   function tick() {
     if (paused || done) return;
-    timeLeft--;
     totalElapsed++;
 
-    if (timeLeft > 0 && timeLeft <= 3) beep(880, 0.1);
+    if (isForza) {
+      forzaPhaseElapsed++;
+      timerDigits.textContent = fmt(forzaPhaseElapsed);
+      elapsedEl.textContent = 'Trascorso: ' + fmt(totalElapsed);
+      return;
+    }
+    if (isTimerMode) {
+      timerDigits.textContent = fmt(totalElapsed);
+      return;
+    }
+
+    timeLeft--;
+
+    if (timeLeft > 0 && timeLeft <= 3) beep(880, 0.15);
 
     if (timeLeft <= 0) {
       phaseIdx++;
       if (phaseIdx >= phases.length) {
         clearInterval(interval);
-        beep(1320, 0.8);
+        beep(1320, 1.0);
         showEnd(false);
         return;
       }
       timeLeft = phases[phaseIdx].duration;
       phaseTotal = timeLeft;
-      beep(1320, 0.35);
+      beep(1320, 0.5);
     }
 
     updateUI();
@@ -531,21 +711,29 @@
   /* ── End screen ───────────────────────────────────────────────── */
   function showEnd(stopped) {
     done = true;
+    releaseWakeLock();
+    var noSave = isForza || isTimerMode;
     endTitle.textContent = stopped ? 'TERMINATO' : 'FINITO!';
-    endTime.textContent = fmt(totalElapsed);
+    var timeStr = fmt(totalElapsed);
+    if (isForza && roundCount > 0) timeStr += ' – ' + roundCount + ' round' + (roundCount !== 1 ? 's' : '');
+    endTime.textContent = timeStr;
     endOverlay.style.display = 'flex';
-    document.getElementById('scoreDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('scoreDesc').value = buildScore(stopped);
+    document.getElementById('btnSaveScore').style.display = noSave ? 'none' : '';
+    if (!noSave) {
+      document.getElementById('scoreDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('scoreDesc').value = buildScore(stopped);
+    }
   }
 
   function buildScore(stopped) {
     var t = config.type;
     var time = fmt(totalElapsed);
-    if (t === 'FOR TIME' && !stopped) return 'FOR TIME \u2013 ' + time;
+    var rounds = showRounds && roundCount > 0 ? ' – ' + roundCount + ' rounds' : '';
+    if (t === 'FOR TIME' && !stopped) return 'FOR TIME \u2013 ' + time + rounds;
     if (t === 'TABATA') return 'TABATA ' + config.rounds + '\u00d7' + config.work + 's/' + config.rest + 's \u2013 ' + time;
     if (t === 'AMRAP') {
       var total = config.segments.filter(function(s){return s.type==='amrap';}).length;
-      return (total > 1 ? total + '\u00d7AMRAP' : 'AMRAP') + ' \u2013 ' + time + (stopped ? ' (stop)' : '');
+      return (total > 1 ? total + '\u00d7AMRAP' : 'AMRAP') + ' \u2013 ' + time + rounds + (stopped ? ' (stop)' : '');
     }
     return t + ' \u2013 ' + time + (stopped ? ' (stop)' : '');
   }
@@ -556,12 +744,23 @@
   };
 
   /* ── Init ─────────────────────────────────────────────────────── */
-  phases = buildPhases(config);
-  if (phases.length === 0) {
-    window.location.href = '{{ url_for("timer_setup", id=workout.id) }}';
-    return;
+  if (isForza || isTimerMode) {
+    if (isTimerMode) {
+      // Cronometro: parte subito senza countdown
+      cdOverlay.style.display = 'none';
+      requestWakeLock();
+      beginTimer();
+    } else {
+      startCountdown();
+    }
+  } else {
+    phases = buildPhases(config);
+    if (phases.length === 0) {
+      window.location.href = '{{ url_for("timer_setup", id=workout.id) }}';
+      return;
+    }
+    startCountdown();
   }
-  startCountdown();
 
 })();
 </script>
