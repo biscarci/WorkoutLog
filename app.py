@@ -1814,6 +1814,40 @@ def add_performance(id):
         stats_by_exercise=stats_by_exercise,
     )
 
+@app.route('/workout/<int:id>/timer-setup')
+@login_required
+def timer_setup(id):
+    w = Workout.query.get_or_404(id)
+    return render_template('timer_setup.html', workout=w)
+
+@app.route('/workout/<int:id>/timer')
+@login_required
+def workout_timer(id):
+    w = Workout.query.get_or_404(id)
+    form = PerformanceForm()
+    return render_template('timer.html', workout=w, form=form)
+
+@app.route('/performance/quick-add/<int:workout_id>', methods=['POST'])
+@login_required
+def quick_add_performance(workout_id):
+    Workout.query.get_or_404(workout_id)
+    form = PerformanceForm()
+    if form.validate_on_submit():
+        perf_date = datetime.combine(form.date.data, datetime.min.time()) if form.date.data else datetime.now()
+        perf = Performance(
+            date=perf_date,
+            description=form.description.data.capitalize(),
+            user_id=current_user.id,
+        )
+        db.session.add(perf)
+        db.session.flush()
+        link = WorkoutPerformance(workout_id=workout_id, performance_id=perf.id)
+        db.session.add(link)
+        db.session.commit()
+        flash('Score salvato!', 'success')
+        logger(current_user.id, 'Quick performance added from timer')
+    return redirect(url_for('add_performance', id=workout_id))
+
 @app.route('/performance/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_performance(id):

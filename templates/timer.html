@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  body {
+    padding-bottom: 0 !important;
+    overflow: hidden;
+  }
+
+  .timer-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .timer-page-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px 8px;
+    text-align: center;
+  }
+
+  .workout-info-panel {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 12px 16px 80px;
+    border-top: 1px solid #1a1a1a;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .workout-info-panel p,
+  .workout-info-panel li {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin: 0;
+  }
+
+  .workout-info-panel .range-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #888;
+    margin: 2px 2px 2px 0;
+  }
+
+  .timer-workout-name {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .timer-phase-label {
+    font-size: clamp(1.1rem, 5vw, 1.5rem);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #ccc;
+    margin-bottom: 6px;
+    min-height: 1.8em;
+    transition: color 0.3s;
+  }
+
+  .timer-phase-label.rest {
+    color: #666;
+  }
+
+  .timer-digits {
+    font-size: clamp(5rem, 22vw, 8rem);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+    margin: 8px 0;
+    letter-spacing: 0.02em;
+  }
+
+  .timer-progress-wrap {
+    width: min(320px, 90vw);
+    height: 5px;
+    background: #222;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 10px 0;
+  }
+
+  .timer-progress-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 3px;
+    transition: width 0.95s linear;
+    width: 100%;
+  }
+
+  .timer-elapsed {
+    font-size: 0.8rem;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  /* Countdown overlay */
+  .cd-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .cd-label {
+    font-size: 0.9rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 12px;
+  }
+
+  .cd-num {
+    font-size: clamp(6rem, 30vw, 10rem);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+  }
+
+  .cd-go {
+    font-size: clamp(3rem, 14vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+  }
+
+  @keyframes cd-pulse {
+    from { transform: scale(1.25); opacity: 0.5; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .cd-anim { animation: cd-pulse 0.7s ease-out forwards; }
+
+  /* End overlay */
+  .end-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+
+  .end-title {
+    font-size: clamp(2rem, 10vw, 3rem);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+  }
+
+  .end-time {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #aaa;
+    margin-bottom: 32px;
+  }
+
+  /* Timer bottom bar */
+  .timer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #000;
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 10px 16px;
+    box-sizing: border-box;
+  }
+
+  .btn-t {
+    background: #000;
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    width: 140px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-t:active {
+    background: #fff;
+    color: #000;
+  }
+
+  .btn-t-danger {
+    border-color: #a50404;
+    color: #a50404;
+  }
+
+  .btn-t-danger:active {
+    background: #a50404;
+    color: #fff;
+  }
+
+  .container.timer-wrap {
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    background: transparent !important;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container timer-wrap">
+
+  <!-- Countdown overlay -->
+  <div class="cd-overlay" id="cdOverlay">
+    <div class="cd-label">Preparati</div>
+    <div id="cdNum" class="cd-num cd-anim">10</div>
+  </div>
+
+  <!-- End overlay (hidden) -->
+  <div class="end-overlay" id="endOverlay" style="display:none;">
+    <div class="end-title" id="endTitle">FINITO!</div>
+    <div class="end-time" id="endTime">00:00</div>
+    <button class="btn btn-outline-primary fw-bold mb-3 px-4 py-3" onclick="openSaveModal()"
+            style="font-size:1rem;letter-spacing:0.1em;">
+      SALVA SCORE
+    </button>
+    <a href="{{ url_for('add_performance', id=workout.id) }}"
+       class="btn btn-outline-primary px-4 py-2"
+       style="font-size:0.9rem;">
+      Torna al workout
+    </a>
+  </div>
+
+  <div class="timer-layout">
+
+    <!-- Main timer UI -->
+    <div class="timer-page-wrap">
+      <div class="timer-workout-name">{{ workout.name }}</div>
+      <div class="timer-phase-label" id="phaseLabel">–</div>
+      <div class="timer-digits" id="timerDigits">00:00</div>
+      <div class="timer-progress-wrap" id="progressWrap">
+        <div class="timer-progress-fill" id="progressFill"></div>
+      </div>
+      <div class="timer-elapsed" id="elapsedEl">Trascorso: 00:00</div>
+    </div>
+
+    <!-- Workout description + suggested weights -->
+    <div class="workout-info-panel">
+      <div style="white-space:pre-wrap; color:#aaa; font-size:0.85rem; line-height:1.5;">{{ workout.description }}</div>
+
+      {% set ranges_groups = workout.get_ranges_by_user() %}
+      {% if ranges_groups %}
+        {% for group in ranges_groups %}
+          <div style="margin-top:10px;">
+            {% if group['user_exercise'] %}
+              <div style="font-size:0.75rem; color:#555; margin-bottom:4px;">
+                {{ group['user_exercise'] }}
+                {% if group['user_exercise'] == "Dips" %} – {{ group['user_weight'] }} reps
+                {% else %} – {{ group['user_weight'] }} Kg{% endif %}
+              </div>
+              <div>
+                {% for range in group['ranges'] %}
+                  <span class="range-badge">
+                    {{ range }}{% if group['user_exercise'] == "Dips" %} reps{% else %} Kg{% endif %}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+  </div><!-- /timer-layout -->
+
+</div>
+
+<!-- Timer controls bar -->
+<div class="timer-bar">
+  <button class="btn-t" id="pauseBtn" onclick="togglePause()">PAUSA</button>
+  <button class="btn-t btn-t-danger" onclick="stopWorkout()">STOP</button>
+</div>
+
+<!-- Save score modal -->
+<div class="modal fade" id="saveModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered mx-3">
+    <div class="modal-content">
+      <div class="modal-header pb-2">
+        <h5 class="modal-title fw-bold">Salva Score</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <form method="POST" action="{{ url_for('quick_add_performance', workout_id=workout.id) }}">
+          {{ form.csrf_token() }}
+          <input type="hidden" name="date" id="scoreDate">
+          <div class="mb-3">
+            <label class="form-label small text-secondary">Descrizione / Score</label>
+            <textarea name="description" id="scoreDesc" class="form-control"
+                      rows="4" minlength="2" maxlength="200" required></textarea>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-outline-primary fw-bold py-2"
+                    style="letter-spacing:0.1em;">SALVA</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ── Config ───────────────────────────────────────────────────── */
+  var config = null;
+  try { config = JSON.parse(sessionStorage.getItem('timerConfig')); } catch (e) {}
+  if (!config) {
+    window.location.href = '{{ url_for("timer_setup", id=workout.id) }}';
+    return;
+  }
+
+  /* ── State ────────────────────────────────────────────────────── */
+  var phases = [];
+  var phaseIdx = 0;
+  var timeLeft = 0;
+  var phaseTotal = 0;
+  var totalElapsed = 0;
+  var interval = null;
+  var paused = false;
+  var done = false;
+  var audioCtx = null;
+
+  /* ── Audio ────────────────────────────────────────────────────── */
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep(freq, dur, vol) {
+    try {
+      var ctx = getCtx();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol || 0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ── Build phases ─────────────────────────────────────────────── */
+  function buildPhases(cfg) {
+    var ph = [];
+    if (cfg.type === 'FOR TIME') {
+      ph.push({ label: 'FOR TIME', duration: cfg.cap * 60, isRest: false });
+
+    } else if (cfg.type === 'AMRAP') {
+      var amrapSegs = cfg.segments.filter(function (s) { return s.type === 'amrap'; });
+      var multi = amrapSegs.length > 1;
+      var n = 0;
+      cfg.segments.forEach(function (seg) {
+        if (seg.type === 'amrap') {
+          n++;
+          ph.push({ label: multi ? 'AMRAP ' + n : 'AMRAP', duration: seg.duration, isRest: false });
+        } else {
+          ph.push({ label: 'RIPOSO', duration: seg.duration, isRest: true });
+        }
+      });
+
+    } else if (cfg.type === 'EMOM') {
+      var emomSegs = cfg.segments.filter(function (s) { return s.type === 'emom'; });
+      var multi = emomSegs.length > 1;
+      var n = 0;
+      cfg.segments.forEach(function (seg) {
+        if (seg.type === 'emom') {
+          n++;
+          var prefix = multi ? 'EMOM ' + n : 'EMOM';
+          for (var r = 0; r < seg.rounds; r++) {
+            ph.push({ label: prefix + ' \u2013 ' + (r + 1) + '/' + seg.rounds, duration: seg.interval, isRest: false });
+          }
+        } else {
+          ph.push({ label: 'RIPOSO', duration: seg.duration, isRest: true });
+        }
+      });
+
+    } else if (cfg.type === 'TABATA') {
+      for (var r = 0; r < cfg.rounds; r++) {
+        ph.push({ label: 'LAVORO ' + (r + 1) + '/' + cfg.rounds, duration: cfg.work, isRest: false });
+        if (r < cfg.rounds - 1) {
+          ph.push({ label: 'RIPOSO ' + (r + 1) + '/' + cfg.rounds, duration: cfg.rest, isRest: true });
+        }
+      }
+    }
+    return ph;
+  }
+
+  /* ── Helpers ──────────────────────────────────────────────────── */
+  function fmt(s) {
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return pad(m) + ':' + pad(sec);
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  /* ── DOM refs ─────────────────────────────────────────────────── */
+  var phaseLabel  = document.getElementById('phaseLabel');
+  var timerDigits = document.getElementById('timerDigits');
+  var progressFill = document.getElementById('progressFill');
+  var elapsedEl   = document.getElementById('elapsedEl');
+  var pauseBtn    = document.getElementById('pauseBtn');
+  var cdOverlay   = document.getElementById('cdOverlay');
+  var cdNum       = document.getElementById('cdNum');
+  var endOverlay  = document.getElementById('endOverlay');
+  var endTitle    = document.getElementById('endTitle');
+  var endTime     = document.getElementById('endTime');
+
+  /* ── Update UI ────────────────────────────────────────────────── */
+  function updateUI() {
+    var phase = phases[phaseIdx];
+    phaseLabel.textContent = phase.label;
+    phaseLabel.className = 'timer-phase-label' + (phase.isRest ? ' rest' : '');
+    timerDigits.textContent = fmt(timeLeft);
+    var pct = phaseTotal > 0 ? ((phaseTotal - timeLeft) / phaseTotal) * 100 : 0;
+    progressFill.style.width = Math.max(0, 100 - pct) + '%';
+    elapsedEl.textContent = 'Trascorso: ' + fmt(totalElapsed);
+  }
+
+  /* ── Countdown ────────────────────────────────────────────────── */
+  function startCountdown() {
+    var count = 10;
+    setNum(count);
+    interval = setInterval(function () {
+      count--;
+      if (count > 0) {
+        setNum(count);
+        if (count <= 3) beep(880, 0.12);
+      } else {
+        cdNum.className = 'cd-go cd-anim';
+        cdNum.textContent = 'GO!';
+        beep(1320, 0.5);
+        clearInterval(interval);
+        setTimeout(function () {
+          cdOverlay.style.display = 'none';
+          beginTimer();
+        }, 700);
+      }
+    }, 1000);
+  }
+
+  function setNum(n) {
+    cdNum.className = 'cd-num';
+    void cdNum.offsetWidth; // reflow to restart animation
+    cdNum.className = 'cd-num cd-anim';
+    cdNum.textContent = n;
+  }
+
+  /* ── Main timer ───────────────────────────────────────────────── */
+  function beginTimer() {
+    phaseIdx = 0;
+    totalElapsed = 0;
+    timeLeft = phases[0].duration;
+    phaseTotal = timeLeft;
+    updateUI();
+    interval = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    if (paused || done) return;
+    timeLeft--;
+    totalElapsed++;
+
+    if (timeLeft > 0 && timeLeft <= 3) beep(880, 0.1);
+
+    if (timeLeft <= 0) {
+      phaseIdx++;
+      if (phaseIdx >= phases.length) {
+        clearInterval(interval);
+        beep(1320, 0.8);
+        showEnd(false);
+        return;
+      }
+      timeLeft = phases[phaseIdx].duration;
+      phaseTotal = timeLeft;
+      beep(1320, 0.35);
+    }
+
+    updateUI();
+  }
+
+  /* ── Controls ─────────────────────────────────────────────────── */
+  window.togglePause = function () {
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'RIPRENDI' : 'PAUSA';
+  };
+
+  window.stopWorkout = function () {
+    if (!confirm('Vuoi terminare il workout?')) return;
+    done = true;
+    clearInterval(interval);
+    showEnd(true);
+  };
+
+  /* ── End screen ───────────────────────────────────────────────── */
+  function showEnd(stopped) {
+    done = true;
+    endTitle.textContent = stopped ? 'TERMINATO' : 'FINITO!';
+    endTime.textContent = fmt(totalElapsed);
+    endOverlay.style.display = 'flex';
+    document.getElementById('scoreDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('scoreDesc').value = buildScore(stopped);
+  }
+
+  function buildScore(stopped) {
+    var t = config.type;
+    var time = fmt(totalElapsed);
+    if (t === 'FOR TIME' && !stopped) return 'FOR TIME \u2013 ' + time;
+    if (t === 'TABATA') return 'TABATA ' + config.rounds + '\u00d7' + config.work + 's/' + config.rest + 's \u2013 ' + time;
+    if (t === 'AMRAP') {
+      var total = config.segments.filter(function(s){return s.type==='amrap';}).length;
+      return (total > 1 ? total + '\u00d7AMRAP' : 'AMRAP') + ' \u2013 ' + time + (stopped ? ' (stop)' : '');
+    }
+    return t + ' \u2013 ' + time + (stopped ? ' (stop)' : '');
+  }
+
+  window.openSaveModal = function () {
+    var modal = new bootstrap.Modal(document.getElementById('saveModal'));
+    modal.show();
+  };
+
+  /* ── Init ─────────────────────────────────────────────────────── */
+  phases = buildPhases(config);
+  if (phases.length === 0) {
+    window.location.href = '{{ url_for("timer_setup", id=workout.id) }}';
+    return;
+  }
+  startCountdown();
+
+})();
+</script>
+{% endblock %}
