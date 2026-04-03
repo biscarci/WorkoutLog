@@ -158,6 +158,10 @@
     padding: 20px;
   }
 
+  .end-btn {
+    width: min(280px, 80vw);
+  }
+
   .end-title {
     font-size: clamp(2rem, 10vw, 3rem);
     font-weight: 900;
@@ -298,12 +302,12 @@
   <div class="end-overlay" id="endOverlay" style="display:none;">
     <div class="end-title" id="endTitle">FINITO!</div>
     <div class="end-time" id="endTime">00:00</div>
-    <button class="btn btn-outline-primary fw-bold mb-3 px-4 py-3" id="btnSaveScore" onclick="openSaveModal()"
+    <button class="btn btn-outline-primary fw-bold mb-3 py-3 end-btn" id="btnSaveScore" onclick="openSaveModal()"
             style="font-size:1rem;letter-spacing:0.1em;">
       SALVA SCORE
     </button>
     <a href="{{ url_for('add_performance', id=workout.id) }}"
-       class="btn btn-outline-primary fw-bold px-4 py-3"
+       class="btn btn-outline-primary fw-bold py-3 end-btn"
        style="font-size:1rem;letter-spacing:0.1em;">
       TORNA AL WORKOUT
     </a>
@@ -383,6 +387,23 @@
   <button class="btn-t btn-t-danger" onclick="stopWorkout()">STOP</button>
 </div>
 
+<!-- Stop confirm modal -->
+<div class="modal fade" id="stopModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered mx-3">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <p class="fw-bold mb-1" style="font-size:1.1rem;letter-spacing:0.05em;">Terminare il workout?</p>
+        <p class="text-secondary small mb-4">Il tempo verrà fermato.</p>
+        <div class="d-flex gap-3 justify-content-center">
+          <button type="button" class="btn btn-outline-primary fw-bold px-4 py-2" data-bs-dismiss="modal">ANNULLA</button>
+          <button type="button" class="btn btn-outline-primary fw-bold px-4 py-2" id="stopConfirmBtn"
+                  style="border-color:#a50404;color:#a50404;">TERMINA</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Save score modal -->
 <div class="modal fade" id="saveModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered mx-3">
@@ -434,6 +455,7 @@
   var showRounds = false;
   var isForza = config.type === 'FORZA';
   var isTimerMode = config.type === 'TIMER';
+  var isForTimeCountUp = config.type === 'FOR TIME' && config.countUp === true;
   var forzaIsWork = true;
   var forzaPhaseElapsed = 0;
   var wakeLock = null;
@@ -675,6 +697,20 @@
       return;
     }
 
+    if (isForTimeCountUp) {
+      // Conta in su; al raggiungimento del cap si ferma
+      timerDigits.textContent = fmt(totalElapsed);
+      var cap = phases[0].duration;
+      progressFill.style.width = Math.min(100, (totalElapsed / cap) * 100) + '%';
+      elapsedEl.textContent = 'Time cap: ' + fmt(cap);
+      if (totalElapsed >= cap) {
+        clearInterval(interval);
+        beep(1320, 1.0);
+        showEnd(false);
+      }
+      return;
+    }
+
     timeLeft--;
 
     if (timeLeft > 0 && timeLeft <= 3) beep(880, 0.15);
@@ -702,10 +738,15 @@
   };
 
   window.stopWorkout = function () {
-    if (!confirm('Vuoi terminare il workout?')) return;
-    done = true;
-    clearInterval(interval);
-    showEnd(true);
+    if (done) return;
+    var stopModal = new bootstrap.Modal(document.getElementById('stopModal'));
+    document.getElementById('stopConfirmBtn').onclick = function () {
+      stopModal.hide();
+      done = true;
+      clearInterval(interval);
+      showEnd(true);
+    };
+    stopModal.show();
   };
 
   /* ── End screen ───────────────────────────────────────────────── */
@@ -729,7 +770,7 @@
     var t = config.type;
     var time = fmt(totalElapsed);
     var rounds = showRounds && roundCount > 0 ? ' – ' + roundCount + ' rounds' : '';
-    if (t === 'FOR TIME' && !stopped) return 'FOR TIME \u2013 ' + time + rounds;
+    if (t === 'FOR TIME' && !stopped) return 'FOR TIME \u2013 ' + (isForTimeCountUp ? fmt(totalElapsed) : time) + rounds;
     if (t === 'TABATA') return 'TABATA ' + config.rounds + '\u00d7' + config.work + 's/' + config.rest + 's \u2013 ' + time;
     if (t === 'AMRAP') {
       var total = config.segments.filter(function(s){return s.type==='amrap';}).length;

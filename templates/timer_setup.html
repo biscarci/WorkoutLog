@@ -52,6 +52,15 @@
         <label class="form-label">Time cap (minuti)</label>
         <input type="number" id="fortime-cap" class="form-control" min="1" max="180" value="20">
       </div>
+      <div class="mb-3">
+        <label class="form-label d-block mb-2">Direzione timer</label>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary flex-grow-1 fortime-dir-btn active-dir fw-bold"
+                  data-dir="down" style="font-size:0.95rem;">⬇ Countdown</button>
+          <button type="button" class="btn btn-outline-primary flex-grow-1 fortime-dir-btn fw-bold"
+                  data-dir="up" style="font-size:0.95rem;">⬆ Countup</button>
+        </div>
+      </div>
     </div>
 
     <!-- EMOM -->
@@ -181,6 +190,19 @@
     btn.closest('.segment-item').remove();
   };
 
+  document.querySelectorAll('.fortime-dir-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.fortime-dir-btn').forEach(function (b) {
+        b.classList.remove('active-dir');
+        b.style.backgroundColor = '';
+        b.style.color = '';
+      });
+      this.classList.add('active-dir');
+      this.style.backgroundColor = '#fff';
+      this.style.color = '#000';
+    });
+  });
+
   window.startWorkout = function () {
     if (!selectedType) {
       alert('Seleziona un tipo di timer');
@@ -206,6 +228,8 @@
 
     } else if (selectedType === 'FOR TIME') {
       config.cap = parseInt(document.getElementById('fortime-cap').value) || 20;
+      var activeDir = document.querySelector('.fortime-dir-btn.active-dir');
+      config.countUp = activeDir ? activeDir.dataset.dir === 'up' : false;
 
     } else if (selectedType === 'EMOM') {
       var segs = [];
