@@ -511,12 +511,14 @@
 
     } else if (cfg.type === 'AMRAP') {
       var amrapSegs = cfg.segments.filter(function (s) { return s.type === 'amrap'; });
-      var multi = amrapSegs.length > 1;
+      var total = amrapSegs.length;
+      var multi = total > 1;
       var n = 0;
       cfg.segments.forEach(function (seg) {
         if (seg.type === 'amrap') {
           n++;
-          ph.push({ label: multi ? 'AMRAP ' + n : 'AMRAP', duration: seg.duration, isRest: false });
+          var remaining = total - n + 1;
+          ph.push({ label: multi ? 'AMRAP ' + remaining + '/' + total : 'AMRAP', duration: seg.duration, isRest: false });
         } else {
           ph.push({ label: 'RIPOSO', duration: seg.duration, isRest: true });
         }
@@ -531,7 +533,8 @@
           n++;
           var prefix = multi ? 'EMOM ' + n : 'EMOM';
           for (var r = 0; r < seg.rounds; r++) {
-            ph.push({ label: prefix + ' \u2013 ' + (r + 1) + '/' + seg.rounds, duration: seg.interval, isRest: false });
+            var remaining = seg.rounds - r;
+            ph.push({ label: prefix + ' \u2013 ' + remaining + '/' + seg.rounds, duration: seg.interval, isRest: false });
           }
         } else {
           ph.push({ label: 'RIPOSO', duration: seg.duration, isRest: true });
@@ -540,9 +543,10 @@
 
     } else if (cfg.type === 'TABATA') {
       for (var r = 0; r < cfg.rounds; r++) {
-        ph.push({ label: 'LAVORO ' + (r + 1) + '/' + cfg.rounds, duration: cfg.work, isRest: false });
+        var remaining = cfg.rounds - r;
+        ph.push({ label: 'LAVORO ' + remaining + '/' + cfg.rounds, duration: cfg.work, isRest: false });
         if (r < cfg.rounds - 1) {
-          ph.push({ label: 'RIPOSO ' + (r + 1) + '/' + cfg.rounds, duration: cfg.rest, isRest: true });
+          ph.push({ label: 'RIPOSO ' + remaining + '/' + cfg.rounds, duration: cfg.rest, isRest: true });
         }
       }
     }
