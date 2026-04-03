@@ -147,8 +147,8 @@
     div.dataset.segtype = 'amrap';
     div.innerHTML =
       '<span class="badge bg-white text-black fw-bold px-2 py-1" style="white-space:nowrap;min-width:72px;">AMRAP ' + amrapIdx + '</span>' +
-      '<input type="number" class="form-control seg-value" placeholder="min" min="1" max="180" value="10" style="max-width:90px;">' +
-      '<span class="text-secondary small">min</span>' +
+      '<input type="number" class="form-control seg-value" placeholder="10" min="1" max="999" value="10" style="max-width:80px;">' +
+      '<button type="button" class="btn btn-action btn-sm unit-toggle" data-unit="min" onclick="toggleUnit(this)" style="min-width:46px;padding:4px 8px;font-size:0.8rem;">min</button>' +
       '<button type="button" class="btn btn-delete btn-sm px-2 ms-auto" onclick="removeSegment(this)">✕</button>';
     container.appendChild(div);
   };
@@ -164,8 +164,9 @@
       '<div class="d-flex align-items-center gap-2 flex-wrap">' +
         '<span class="badge bg-white text-black fw-bold px-2 py-1" style="white-space:nowrap;min-width:72px;">EMOM ' + emomIdx + '</span>' +
         '<span class="text-secondary small">ogni</span>' +
-        '<input type="number" class="form-control seg-interval" placeholder="X" min="1" max="10" value="1" style="max-width:60px;">' +
-        '<span class="text-secondary small">min ×</span>' +
+        '<input type="number" class="form-control seg-interval" placeholder="1" min="1" max="999" value="1" style="max-width:60px;">' +
+        '<button type="button" class="btn btn-action btn-sm unit-toggle" data-unit="min" onclick="toggleUnit(this)" style="min-width:46px;padding:4px 8px;font-size:0.8rem;">min</button>' +
+        '<span class="text-secondary small">×</span>' +
         '<input type="number" class="form-control seg-rounds" placeholder="Y" min="1" max="100" value="10" style="max-width:70px;">' +
         '<span class="text-secondary small">rounds</span>' +
         '<button type="button" class="btn btn-delete btn-sm px-2 ms-auto" onclick="removeSegment(this)">✕</button>' +
@@ -188,6 +189,16 @@
 
   window.removeSegment = function (btn) {
     btn.closest('.segment-item').remove();
+  };
+
+  window.toggleUnit = function (btn) {
+    if (btn.dataset.unit === 'min') {
+      btn.dataset.unit = 'sec';
+      btn.textContent = 'sec';
+    } else {
+      btn.dataset.unit = 'min';
+      btn.textContent = 'min';
+    }
   };
 
   document.querySelectorAll('.fortime-dir-btn').forEach(function (btn) {
@@ -215,7 +226,10 @@
       var segs = [];
       document.querySelectorAll('#amrap-segments .segment-item').forEach(function (item) {
         if (item.dataset.segtype === 'amrap') {
-          segs.push({ type: 'amrap', duration: (parseInt(item.querySelector('.seg-value').value) || 10) * 60 });
+          var unitBtn = item.querySelector('.unit-toggle');
+          var unit = unitBtn ? unitBtn.dataset.unit : 'min';
+          var val = parseInt(item.querySelector('.seg-value').value) || 10;
+          segs.push({ type: 'amrap', duration: unit === 'sec' ? val : val * 60 });
         } else {
           segs.push({ type: 'rest', duration: parseInt(item.querySelector('.seg-value').value) || 60 });
         }
@@ -237,7 +251,12 @@
         if (item.dataset.segtype === 'emom') {
           segs.push({
             type: 'emom',
-            interval: (parseInt(item.querySelector('.seg-interval').value) || 1) * 60,
+            interval: (function() {
+              var unitBtn = item.querySelector('.unit-toggle');
+              var unit = unitBtn ? unitBtn.dataset.unit : 'min';
+              var val = parseInt(item.querySelector('.seg-interval').value) || 1;
+              return unit === 'sec' ? val : val * 60;
+            })(),
             rounds: parseInt(item.querySelector('.seg-rounds').value) || 10
           });
         } else {
