@@ -25,8 +25,8 @@ from sqlalchemy import func, and_
 from collections import defaultdict
 
 # Importazioni del progetto locale
-from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, DeleteWorkoutsByDayForm, EditPerformanceForm, LoginForm, PerformanceForm,
-                   RegistrationForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm)
+from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, DeleteExerciseForm, DeleteWorkoutsByDayForm, EditPerformanceForm, ExerciseCatalogForm, LoginForm, PerformanceForm,
+                   RegistrationForm, UpdateProfileForm, UpdateWorkoutForm, UserStatisticForm, movement_choices)
 from utils import (allowed_file, 
                    random_motivational_phrase, random_rest_message, parse_week_text)
 
@@ -245,6 +245,38 @@ class UserStatistic(db.Model):
     exercise = db.Column(db.Text, nullable=True)
     weight = db.Column(db.Float, nullable=True)
     reps = db.Column(db.Integer, nullable=True)
+
+class ExerciseCatalog(db.Model):
+    """Catalogo esercizi gestito dal coach, usato per le percentuali sui massimali."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    unit = db.Column(db.String(20), nullable=False, default='kg')  # 'kg' oppure 'reps'
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @staticmethod
+    def choices():
+        """Coppie (valore, label) per i SelectField, ordinate alfabeticamente."""
+        rows = (
+            ExerciseCatalog.query
+            .filter_by(is_active=True)
+            .order_by(func.lower(ExerciseCatalog.name).asc())
+            .all()
+        )
+        return [(r.name, r.name) for r in rows]
+
+    @staticmethod
+    def unit_for(exercise_name):
+        """Unita' di misura di un esercizio, con match case-insensitive."""
+        if not exercise_name:
+            return 'kg'
+        row = (
+            ExerciseCatalog.query
+            .filter(func.lower(ExerciseCatalog.name) == exercise_name.strip().lower())
+            .first()
+        )
+        return row.unit if row else 'kg'
+
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -492,6 +524,35 @@ def create_superuser_command(username, email, password, name, surname):
 
 # Register the command with your Flask app
 app.cli.add_command(create_superuser_command)
+
+
+@click.command('seed-exercises')
+@with_appcontext
+def seed_exercises_command():
+    """Popola il catalogo esercizi partendo dalla lista storica e dai dati esistenti."""
+    found = {}
+    for value, _label in movement_choices:
+        found.setdefault(value.strip().lower(), value.strip())
+    for (name,) in db.session.query(UserStatistic.exercise).distinct():
+        if name and name.strip():
+            found.setdefault(name.strip().lower(), name.strip())
+    for (name,) in db.session.query(Range.exercise).distinct():
+        if name and name.strip():
+            found.setdefault(name.strip().lower(), name.strip())
+
+    known = {name.lower() for (name,) in db.session.query(ExerciseCatalog.name).all()}
+    added = 0
+    for key, name in sorted(found.items()):
+        if key in known:
+            continue
+        db.session.add(ExerciseCatalog(name=name, unit='reps' if key == 'dips' else 'kg'))
+        added += 1
+
+    db.session.commit()
+    click.echo(f'Catalogo esercizi aggiornato: {added} nuovi esercizi.')
+
+
+app.cli.add_command(seed_exercises_command)
 
 
 @app.route('/admin/dashboard', methods=['GET'])
@@ -1915,8 +1976,9 @@ def delete_performance(id):
 @login_required
 def user_stats():
     form = UserStatisticForm()
+    form.set_exercise_choices(ExerciseCatalog.choices())
     delete_form = BulkDeleteStatsForm()
-    
+
     if form.validate_on_submit():
         stat = UserStatistic(
             user_id=current_user.id,
@@ -2054,6 +2116,10 @@ def edit_stat(id):
         abort(403)
 
     form = UserStatisticForm()
+    if request.method == 'GET':
+        form.exercise.data = stat.exercise
+    form.set_exercise_choices(ExerciseCatalog.choices())
+
     if form.validate_on_submit():
         stat.date = form.date.data
         stat.exercise = form.exercise.data
@@ -2065,7 +2131,6 @@ def edit_stat(id):
 
     if request.method == 'GET':
         form.date.data = stat.date
-        form.exercise.data = stat.exercise
         form.weight.data = stat.weight
         
 
@@ -2094,6 +2159,166 @@ def delete_stats():
     flash(f'Eliminate {deleted} statistiche', 'success')
     logger(current_user.id, f'User stats deleted: {deleted}')
     return redirect(url_for('user_stats'))
+
+@app.route('/admin/exercises', methods=['GET', 'POST'])
+@login_required
+def admin_exercises():
+    if not current_user.is_superuser:
+        abort(403)
+
+    form = ExerciseCatalogForm()
+    delete_form = DeleteExerciseForm()
+
+    if form.validate_on_submit():
+        name = (form.name.data or '').strip()
+        existing = (
+            ExerciseCatalog.query
+            .filter(func.lower(ExerciseCatalog.name) == name.lower())
+            .first()
+        )
+        if existing:
+            if existing.is_active:
+                flash(f"L'esercizio '{existing.name}' esiste gia'.", 'warning')
+            else:
+                existing.is_active = True
+                existing.unit = form.unit.data
+                db.session.commit()
+                flash(f"Esercizio '{existing.name}' riattivato.", 'success')
+                logger(current_user.id, f'Exercise reactivated: {existing.name}')
+            return redirect(url_for('admin_exercises'))
+
+        db.session.add(ExerciseCatalog(name=name, unit=form.unit.data))
+        db.session.commit()
+        flash(f"Esercizio '{name}' aggiunto.", 'success')
+        logger(current_user.id, f'Exercise added: {name}')
+        return redirect(url_for('admin_exercises'))
+
+    exercises = (
+        ExerciseCatalog.query
+        .order_by(ExerciseCatalog.is_active.desc(), func.lower(ExerciseCatalog.name).asc())
+        .all()
+    )
+
+    # Quanti massimali e quanti range dipendono da ciascun esercizio
+    stat_counts = dict(
+        db.session.query(func.lower(UserStatistic.exercise), func.count(UserStatistic.id))
+        .group_by(func.lower(UserStatistic.exercise))
+        .all()
+    )
+    range_counts = dict(
+        db.session.query(func.lower(Range.exercise), func.count(Range.id))
+        .group_by(func.lower(Range.exercise))
+        .all()
+    )
+
+    rows = []
+    for ex in exercises:
+        key = ex.name.lower()
+        rows.append({
+            'exercise': ex,
+            'stats': stat_counts.get(key, 0),
+            'ranges': range_counts.get(key, 0),
+        })
+
+    # Esercizi presenti nei dati ma non ancora a catalogo: vanno importati
+    known = {ex.name.lower() for ex in exercises}
+    orphans = sorted(
+        {k for k in list(stat_counts) + list(range_counts) if k and k not in known}
+    )
+
+    return render_template(
+        'admin_exercises.html',
+        title='Esercizi',
+        form=form,
+        delete_form=delete_form,
+        rows=rows,
+        orphans=orphans,
+    )
+
+
+@app.route('/admin/exercises/<int:id>/toggle', methods=['POST'])
+@login_required
+def toggle_exercise(id):
+    if not current_user.is_superuser:
+        abort(403)
+    delete_form = DeleteExerciseForm()
+    if not delete_form.validate_on_submit():
+        abort(400)
+
+    ex = ExerciseCatalog.query.get_or_404(id)
+    ex.is_active = not ex.is_active
+    db.session.commit()
+    stato = 'attivato' if ex.is_active else 'disattivato'
+    flash(f"Esercizio '{ex.name}' {stato}.", 'success')
+    logger(current_user.id, f'Exercise {stato}: {ex.name}')
+    return redirect(url_for('admin_exercises'))
+
+
+@app.route('/admin/exercises/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_exercise(id):
+    if not current_user.is_superuser:
+        abort(403)
+    delete_form = DeleteExerciseForm()
+    if not delete_form.validate_on_submit():
+        abort(400)
+
+    ex = ExerciseCatalog.query.get_or_404(id)
+    name = ex.name
+
+    # Se e' gia' usato da massimali o percentuali lo disattiviamo soltanto:
+    # cancellarlo romperebbe il calcolo dei pesi sui workout esistenti.
+    in_use = (
+        UserStatistic.query.filter(func.lower(UserStatistic.exercise) == name.lower()).first()
+        or Range.query.filter(func.lower(Range.exercise) == name.lower()).first()
+    )
+    if in_use:
+        ex.is_active = False
+        db.session.commit()
+        flash(f"'{name}' e' usato in massimali o percentuali: disattivato invece che eliminato.", 'warning')
+        logger(current_user.id, f'Exercise deactivated (in use): {name}')
+        return redirect(url_for('admin_exercises'))
+
+    db.session.delete(ex)
+    db.session.commit()
+    flash(f"Esercizio '{name}' eliminato.", 'success')
+    logger(current_user.id, f'Exercise deleted: {name}')
+    return redirect(url_for('admin_exercises'))
+
+
+@app.route('/admin/exercises/import', methods=['POST'])
+@login_required
+def import_exercises():
+    """Porta a catalogo gli esercizi gia' presenti in massimali e percentuali."""
+    if not current_user.is_superuser:
+        abort(403)
+    delete_form = DeleteExerciseForm()
+    if not delete_form.validate_on_submit():
+        abort(400)
+
+    known = {name.lower() for (name,) in db.session.query(ExerciseCatalog.name).all()}
+
+    found = {}
+    for (name,) in db.session.query(UserStatistic.exercise).distinct():
+        if name and name.strip():
+            found.setdefault(name.strip().lower(), name.strip())
+    for (name,) in db.session.query(Range.exercise).distinct():
+        if name and name.strip():
+            found.setdefault(name.strip().lower(), name.strip())
+
+    added = 0
+    for key, name in sorted(found.items()):
+        if key in known:
+            continue
+        db.session.add(ExerciseCatalog(name=name, unit='reps' if key == 'dips' else 'kg'))
+        known.add(key)
+        added += 1
+
+    db.session.commit()
+    flash(f'Importati {added} esercizi dai dati esistenti.', 'success' if added else 'info')
+    logger(current_user.id, f'Exercises imported: {added}')
+    return redirect(url_for('admin_exercises'))
+
 
 @app.errorhandler(404)
 def not_found_error(error):

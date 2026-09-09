@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<style>
+  legend { color: #fff; }
+  h1 { font-size: 30px; }
+
+  .ex-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #222;
+  }
+
+  .ex-name {
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .ex-meta {
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  .ex-row.inactive .ex-name,
+  .ex-row.inactive .ex-meta {
+    color: #555;
+    text-decoration: line-through;
+  }
+
+  .unit-badge {
+    display: inline-block;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-size: 0.7rem;
+    color: #888;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+
+<div class="container">
+  <h1 class="text-center">Esercizi</h1>
+  <p class="text-center text-secondary small mb-4" style="letter-spacing:0.05em;">
+    Il catalogo alimenta la tendina dei massimali e il calcolo delle percentuali.
+  </p>
+
+  <!-- Nuovo esercizio -->
+  <form class="row g-2 align-items-end mb-4" method="POST" action="{{ url_for('admin_exercises') }}">
+    {{ form.hidden_tag() }}
+    <fieldset class="col-12">
+      <legend style="font-size:1rem;">Aggiungi esercizio</legend>
+    </fieldset>
+    <div class="col-12 col-sm-6">
+      {{ render_field(form.name, class_="form-control", placeholder="Es. Overhead Squat") }}
+    </div>
+    <div class="col-6 col-sm-3">
+      {{ render_field(form.unit, class_="form-select") }}
+    </div>
+    <div class="col-6 col-sm-3 d-grid">
+      <button type="submit" class="btn btn-add-workout" style="width:100%;">AGGIUNGI</button>
+    </div>
+  </form>
+
+  {% if orphans %}
+  <div class="alert mb-4">
+    <p class="mb-2 small">
+      Ci sono {{ orphans|length }} esercizi usati nei dati ma non ancora a catalogo:
+      <span class="text-secondary">{{ orphans|join(', ') }}</span>
+    </p>
+    <form method="POST" action="{{ url_for('import_exercises') }}">
+      {{ delete_form.hidden_tag() }}
+      <button type="submit" class="btn btn-action" style="width:auto;">IMPORTA</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Lista esercizi -->
+  <h5 class="mb-3">In catalogo <span class="text-secondary small">({{ rows|length }})</span></h5>
+
+  {% if rows %}
+    {% for row in rows %}
+    <div class="ex-row {% if not row.exercise.is_active %}inactive{% endif %}">
+      <div class="flex-grow-1">
+        <div class="ex-name">{{ row.exercise.name }}</div>
+        <div class="ex-meta">
+          <span class="unit-badge">{{ row.exercise.unit }}</span>
+          {{ row.stats }} massimali · {{ row.ranges }} percentuali
+          {% if not row.exercise.is_active %} · disattivato{% endif %}
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('toggle_exercise', id=row.exercise.id) }}">
+        {{ delete_form.hidden_tag() }}
+        <button type="submit" class="btn btn-action" title="Attiva / disattiva">
+          {% if row.exercise.is_active %}<i class="bi bi-eye-slash"></i>{% else %}<i class="bi bi-eye"></i>{% endif %}
+        </button>
+      </form>
+
+      <form method="POST" action="{{ url_for('delete_exercise', id=row.exercise.id) }}"
+            onsubmit="return confirm('Eliminare {{ row.exercise.name }}?');">
+        {{ delete_form.hidden_tag() }}
+        <button type="submit" class="btn btn-delete" title="Elimina">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-secondary small">Nessun esercizio a catalogo. Usa il form qui sopra oppure importa quelli esistenti.</p>
+  {% endif %}
+</div>
+
+<div class="bottom-bar">
+  <a class="btn btn-outline-primary btn-block" href="{{ url_for('menu') }}" role="button">Menu</a>
+</div>
+{% endblock %}

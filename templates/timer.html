@@ -74,7 +74,7 @@
   }
 
   .timer-digits {
-    font-size: clamp(5rem, 22vw, 8rem);
+    font-size: clamp(5.5rem, 26vw, 9rem);
     font-weight: 900;
     font-family: 'Courier New', monospace;
     line-height: 1;
@@ -189,7 +189,10 @@
     justify-content: center;
     gap: 16px;
     padding: 10px 16px;
+    /* evita che i tasti finiscano sotto la home bar dell'iPhone */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+    z-index: 95;
   }
 
   .btn-t {
@@ -197,14 +200,18 @@
     color: #fff;
     border: 2px solid #fff;
     border-radius: 8px;
-    padding: 12px 0;
-    font-size: 0.95rem;
+    /* target ampio: su mobile si preme al buio, di corsa e sudati */
+    padding: 16px 0;
+    min-height: 58px;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.1em;
-    width: 140px;
+    flex: 1 1 0;
+    max-width: 200px;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   .btn-t:active {
@@ -253,10 +260,11 @@
     border: 2px solid #fff;
     border-radius: 8px;
     color: #fff;
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 700;
-    width: 56px;
-    height: 56px;
+    width: 72px;
+    height: 72px;
+    touch-action: manipulation;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -274,6 +282,74 @@
   }
 
   .btn-round-minus:active { background: #333; color: #fff; }
+
+  /* Tutta la zona del cronometro conta un round: a mano libera e'
+     molto piu' facile da centrare del solo bottone "+" */
+  .tap-zone {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    border-radius: 12px;
+    transition: background 0.12s;
+    width: 100%;
+  }
+
+  .tap-zone.tapped {
+    background: rgba(255, 255, 255, 0.13);
+  }
+
+  .tap-hint {
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #444;
+    margin-top: 8px;
+  }
+
+  /* Flash di conferma a ogni round: visibile con la coda dell'occhio */
+  .round-flash {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 90;
+  }
+
+  .round-flash.on {
+    animation: flash-out 0.28s ease-out;
+  }
+
+  @keyframes flash-out {
+    from { opacity: 0.22; }
+    to   { opacity: 0; }
+  }
+
+  /* Pannello note richiudibile: durante il WOD conta il cronometro */
+  .info-toggle {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 8px 0;
+    width: 100%;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .workout-info-panel.collapsed .info-body {
+    display: none;
+  }
+
+  .workout-info-panel.collapsed {
+    flex: 0 0 auto;
+    overflow: visible;
+    padding-bottom: 90px;
+  }
 
   .container.timer-wrap {
     border: none !important;
@@ -318,28 +394,36 @@
     <!-- Main timer UI -->
     <div class="timer-page-wrap">
       <div class="timer-workout-name">{{ workout.name }}</div>
-      <div class="timer-phase-label" id="phaseLabel">–</div>
-      <div class="timer-digits" id="timerDigits">00:00</div>
-      <div class="timer-progress-wrap" id="progressWrap">
-        <div class="timer-progress-fill" id="progressFill"></div>
-      </div>
-      <div class="timer-elapsed" id="elapsedEl">Trascorso: 00:00</div>
 
-      <!-- Round counter (AMRAP / FOR TIME only) -->
-      <div class="round-counter" id="roundCounter">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <div class="round-label">Rounds</div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button class="btn-round btn-round-minus" id="btnRoundMinus" onclick="changeRound(-1)" aria-label="Togli round">−</button>
-            <div class="round-num" id="roundNum">0</div>
-            <button class="btn-round" id="btnRoundPlus" onclick="changeRound(1)" aria-label="Aggiungi round">+</button>
+      <!-- Toccare qui aggiunge un round quando il contatore e' attivo -->
+      <div class="tap-zone" id="tapZone">
+        <div class="timer-phase-label" id="phaseLabel">–</div>
+        <div class="timer-digits" id="timerDigits">00:00</div>
+        <div class="timer-progress-wrap" id="progressWrap">
+          <div class="timer-progress-fill" id="progressFill"></div>
+        </div>
+        <div class="timer-elapsed" id="elapsedEl">Trascorso: 00:00</div>
+
+        <!-- Round counter (AMRAP / FOR TIME only) -->
+        <div class="round-counter" id="roundCounter">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div class="round-label">Rounds</div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <button class="btn-round btn-round-minus" id="btnRoundMinus" onclick="changeRound(-1)" aria-label="Togli round">−</button>
+              <div class="round-num" id="roundNum">0</div>
+              <button class="btn-round" id="btnRoundPlus" onclick="changeRound(1)" aria-label="Aggiungi round">+</button>
+            </div>
           </div>
         </div>
+
+        <div class="tap-hint" id="tapHint" style="display:none;">Tocca lo schermo per +1 round</div>
       </div>
     </div>
 
     <!-- Workout description + suggested weights -->
-    <div class="workout-info-panel">
+    <div class="workout-info-panel collapsed" id="infoPanel">
+      <button type="button" class="info-toggle" id="infoToggle" onclick="toggleInfo()">▾ Mostra workout</button>
+      <div class="info-body">
       <div style="white-space:pre-wrap; color:#aaa; font-size:0.85rem; line-height:1.5;">{{ workout.description }}</div>
 
       {% set ranges_groups = workout.get_ranges_by_user() %}
@@ -363,9 +447,12 @@
           </div>
         {% endfor %}
       {% endif %}
+      </div><!-- /info-body -->
     </div>
 
   </div><!-- /timer-layout -->
+
+  <div class="round-flash" id="roundFlash"></div>
 
 </div>
 
@@ -458,23 +545,95 @@
   var isForTimeCountUp = config.type === 'FOR TIME' && config.countUp === true;
   var forzaIsWork = true;
   var forzaPhaseElapsed = 0;
+  var lastTickAt = null;
+  /* ── Wake lock ────────────────────────────────────────────────
+     iOS rilascia il lock a ogni cambio di stato (notifica, blocco
+     manuale, cambio app) senza segnalarlo: va riacquisito ogni volta
+     che la pagina torna visibile. Su iOS < 16.4 la Wake Lock API non
+     esiste e l'unico modo per tenere acceso lo schermo e' un video
+     muto in loop, che il sistema interpreta come riproduzione attiva. */
   var wakeLock = null;
+  var wakeLockWanted = false;
+  var noSleepVideo = null;
+
+  function supportsWakeLock() {
+    return 'wakeLock' in navigator && navigator.wakeLock;
+  }
 
   async function requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) {
+    wakeLockWanted = true;
+
+    if (supportsWakeLock()) {
+      if (wakeLock) return;
+      try {
         wakeLock = await navigator.wakeLock.request('screen');
+        // Se il sistema lo revoca proviamo a riprenderlo appena possibile
+        wakeLock.addEventListener('release', function () {
+          wakeLock = null;
+          if (wakeLockWanted && document.visibilityState === 'visible') {
+            setTimeout(requestWakeLock, 300);
+          }
+        });
+        return;
+      } catch (e) {
+        wakeLock = null;
       }
-    } catch (e) {}
+    }
+
+    startNoSleepVideo();
   }
 
   function releaseWakeLock() {
-    if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    wakeLockWanted = false;
+    if (wakeLock) {
+      try { wakeLock.release(); } catch (e) {}
+      wakeLock = null;
+    }
+    stopNoSleepVideo();
   }
 
-  // Riacquista il wake lock se la pagina torna in primo piano
+  /* Fallback: video muto inline che tiene sveglio lo schermo su iOS datati */
+  function startNoSleepVideo() {
+    if (noSleepVideo) {
+      if (noSleepVideo.paused) noSleepVideo.play().catch(function () {});
+      return;
+    }
+    var v = document.createElement('video');
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.setAttribute('muted', '');
+    v.muted = true;
+    v.loop = true;
+    v.autoplay = true;
+    // 1x1 px, ~0.3s: sufficiente a mantenere attivo lo schermo
+    v.src = 'data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAs1tZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0OCByMjY0MyA1YzY1NzA0IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNSAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTEwIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAD2WIhAA3//728P4FNjuZQQAAAu5tb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAAZAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAACGHRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAAZAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAgAAAAIAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAAGQAAAAAAAEAAAAAAZBtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAACgAAAAEAFXEAAAAAAAtaGRscgAAAAAAAAAAdmlkZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAE7bWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAAA+3N0YmwAAACXc3RzZAAAAAAAAAABAAAAh2F2YzEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAgACAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYP//AAAAMWF2Y0MBZAAK/+EAGGdkAArZyfhIjTSpAQEBQAAAAwBAAAAKA8YMZYABAAZo6+PLIsAAAAAYc3R0cwAAAAAAAAABAAAAAgAAAgAAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAIAAAABAAAAHHN0c3oAAAAAAAAAAAAAAAIAAALGAAAACwAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1Ni40MC4xMDE=';
+    v.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:0;left:0;';
+    document.body.appendChild(v);
+    noSleepVideo = v;
+    v.play().catch(function () {});
+  }
+
+  function stopNoSleepVideo() {
+    if (!noSleepVideo) return;
+    try { noSleepVideo.pause(); } catch (e) {}
+    noSleepVideo.remove();
+    noSleepVideo = null;
+  }
+
+  // Riacquista il wake lock quando la pagina torna in primo piano
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && !done && !paused) requestWakeLock();
+    if (document.visibilityState === 'visible' && wakeLockWanted) {
+      requestWakeLock();
+    }
+  });
+
+  // Su iOS il ritorno dalla bfcache non scatena visibilitychange
+  window.addEventListener('pageshow', function () {
+    if (wakeLockWanted) requestWakeLock();
+  });
+
+  window.addEventListener('focus', function () {
+    if (wakeLockWanted) requestWakeLock();
   });
 
   /* ── Audio ────────────────────────────────────────────────────── */
@@ -601,7 +760,7 @@
         clearInterval(interval);
         setTimeout(function () {
           cdOverlay.style.display = 'none';
-          requestWakeLock();
+          requestWakeLock();  // il lock puo' essere decaduto durante il countdown
           beginTimer();
         }, 700);
       }
@@ -625,9 +784,47 @@
     }
   }
 
+  var roundFlash = document.getElementById('roundFlash');
+
   window.changeRound = function (delta) {
+    var before = roundCount;
     roundCount = Math.max(0, roundCount + delta);
+    if (roundCount === before) return;
     document.getElementById('roundNum').textContent = roundCount;
+
+    if (delta > 0) {
+      // Conferma tattile e visiva: sotto sforzo non si guarda lo schermo
+      if (navigator.vibrate) navigator.vibrate(35);
+      roundFlash.classList.remove('on');
+      void roundFlash.offsetWidth;
+      roundFlash.classList.add('on');
+    }
+  };
+
+  /* ── Tap sull'area centrale = +1 round ────────────────────────── */
+  var tapZone = document.getElementById('tapZone');
+
+  if (showRounds && !isForza) {
+    document.getElementById('tapHint').style.display = 'block';
+
+    tapZone.addEventListener('click', function (e) {
+      // I bottoni +/- gestiscono gia' il proprio click
+      if (e.target.closest('.btn-round')) return;
+      if (done) return;
+      changeRound(1);
+      tapZone.classList.add('tapped');
+      setTimeout(function () { tapZone.classList.remove('tapped'); }, 120);
+    });
+  }
+
+  /* ── Pannello workout richiudibile ────────────────────────────── */
+  window.toggleInfo = function () {
+    var panel = document.getElementById('infoPanel');
+    var btn = document.getElementById('infoToggle');
+    panel.classList.toggle('collapsed');
+    btn.textContent = panel.classList.contains('collapsed')
+      ? '▾ Mostra workout'
+      : '▴ Nascondi workout';
   };
 
   /* ── FORZA: toggle Work / Rest ────────────────────────────────── */
@@ -651,6 +848,7 @@
 
   /* ── TIMER: reset ─────────────────────────────────────────────── */
   window.resetTimer = function () {
+    lastTickAt = null;
     totalElapsed = 0;
     timerDigits.textContent = '00:00';
     elapsedEl.textContent = 'Trascorso: 00:00';
@@ -666,6 +864,7 @@
       phaseLabel.className = 'timer-phase-label';
       timerDigits.textContent = '00:00';
       elapsedEl.textContent = 'Trascorso: 00:00';
+      lastTickAt = Date.now();
       interval = setInterval(tick, 1000);
       return;
     }
@@ -675,6 +874,7 @@
       phaseLabel.textContent = 'TIMER';
       timerDigits.textContent = '00:00';
       elapsedEl.textContent = '';
+      lastTickAt = Date.now();
       interval = setInterval(tick, 1000);
       return;
     }
@@ -683,11 +883,31 @@
     timeLeft = phases[0].duration;
     phaseTotal = timeLeft;
     updateUI();
+    lastTickAt = Date.now();
     interval = setInterval(tick, 1000);
   }
 
+  /* iOS congela i timer quando lo schermo si spegne o si cambia app:
+     al risveglio setInterval avrebbe accumulato meno tick del dovuto.
+     Ancoriamo il conteggio all'orologio di sistema e, al rientro,
+     recuperiamo in un colpo solo tutti i secondi mancanti. */
+
   function tick() {
     if (paused || done) return;
+
+    var now = Date.now();
+    var steps = 1;
+    if (lastTickAt !== null) {
+      steps = Math.max(1, Math.round((now - lastTickAt) / 1000));
+    }
+    lastTickAt = now;
+
+    for (var i = 0; i < steps && !done; i++) {
+      tickOnce(i === steps - 1);
+    }
+  }
+
+  function tickOnce(isLast) {
     totalElapsed++;
 
     if (isForza) {
@@ -717,7 +937,7 @@
 
     timeLeft--;
 
-    if (timeLeft > 0 && timeLeft <= 3) beep(880, 0.15);
+    if (isLast && timeLeft > 0 && timeLeft <= 3) beep(880, 0.15);
 
     if (timeLeft <= 0) {
       phaseIdx++;
@@ -729,7 +949,7 @@
       }
       timeLeft = phases[phaseIdx].duration;
       phaseTotal = timeLeft;
-      beep(1320, 0.5);
+      if (isLast) beep(1320, 0.5);
     }
 
     updateUI();
@@ -739,6 +959,9 @@
   window.togglePause = function () {
     paused = !paused;
     pauseBtn.textContent = paused ? 'RIPRENDI' : 'PAUSA';
+    // Senza azzerare l'ancora, alla ripresa il timer recupererebbe
+    // anche i secondi passati in pausa
+    lastTickAt = null;
   };
 
   window.stopWorkout = function () {
@@ -789,11 +1012,13 @@
   };
 
   /* ── Init ─────────────────────────────────────────────────────── */
+  // Lo schermo va tenuto acceso gia' durante il countdown, non solo dopo
+  requestWakeLock();
+
   if (isForza || isTimerMode) {
     if (isTimerMode) {
       // Cronometro: parte subito senza countdown
       cdOverlay.style.display = 'none';
-      requestWakeLock();
       beginTimer();
     } else {
       startCountdown();

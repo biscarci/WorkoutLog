@@ -94,12 +94,35 @@ movement_choices = [
     # ('Toes To Bar', 'Toes To Bar'),
 ]
 
+class ExerciseCatalogForm(FlaskForm):
+    name = StringField('Nome esercizio', validators=[DataRequired(), Length(min=2, max=100)])
+    unit = SelectField('Unita', choices=[('kg', 'Kg'), ('reps', 'Reps')], default='kg',
+                       validators=[DataRequired()])
+    submit = SubmitField('Salva')
+
+
+class DeleteExerciseForm(FlaskForm):
+    submit = SubmitField('Elimina')
+
+
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
-    exercise = SelectField("Exercise", choices= movement_choices, validators=[DataRequired()])
+    exercise = SelectField("Exercise", choices=movement_choices, validators=[DataRequired()])
     weight = FloatField('Weight (Kg) / Reps', validators=[Optional()])
     #reps = IntegerField('Reps', validators=[Optional()], default=1)
     submit = SubmitField('Save')
+
+    def set_exercise_choices(self, choices):
+        """Popola la tendina con il catalogo esercizi gestito dal coach.
+
+        Mantiene il valore gia' selezionato anche se l'esercizio e' stato nel
+        frattempo disattivato, per non invalidare la modifica di uno storico.
+        """
+        choices = list(choices) if choices else list(movement_choices)
+        current = self.exercise.data
+        if current and current not in [c[0] for c in choices]:
+            choices.append((current, current))
+        self.exercise.choices = choices
 
 
 class BulkDeleteStatsForm(FlaskForm):
