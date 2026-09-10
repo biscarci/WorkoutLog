@@ -100,6 +100,18 @@ def format_measure(value, unit):
     return f"{round(value, 1)}"
 
 
+def normalize_exercise(name):
+    """Chiave di confronto fra esercizi scritti in modo diverso.
+
+    Serve a riconoscere come lo stesso esercizio "Split Jerk", "Split jerk"
+    e "Split  Jerk ": senza questa normalizzazione il catalogo continuerebbe
+    a segnalarli come mancanti anche dopo l'import.
+    """
+    if not name:
+        return ''
+    return ' '.join(str(name).split()).lower()
+
+
 def exercise_units():
     """Mappa esercizio -> unita', per far reagire i form alla scelta in tendina."""
     return {
@@ -2265,19 +2277,28 @@ def admin_exercises():
         .all()
     )
 
+    # I conteggi arrivano gia' in minuscolo dal group_by, ma le grafie nei dati
+    # possono differire per spazi: raggruppiamo sulla stessa chiave del catalogo
+    stats_by_key = defaultdict(int)
+    for raw_name, count in stat_counts.items():
+        stats_by_key[normalize_exercise(raw_name)] += count
+    ranges_by_key = defaultdict(int)
+    for raw_name, count in range_counts.items():
+        ranges_by_key[normalize_exercise(raw_name)] += count
+
     rows = []
     for ex in exercises:
-        key = ex.name.lower()
+        key = normalize_exercise(ex.name)
         rows.append({
             'exercise': ex,
-            'stats': stat_counts.get(key, 0),
-            'ranges': range_counts.get(key, 0),
+            'stats': stats_by_key.get(key, 0),
+            'ranges': ranges_by_key.get(key, 0),
         })
 
     # Esercizi presenti nei dati ma non ancora a catalogo: vanno importati
-    known = {ex.name.lower() for ex in exercises}
+    known = {normalize_exercise(ex.name) for ex in exercises}
     orphans = sorted(
-        {k for k in list(stat_counts) + list(range_counts) if k and k not in known}
+        {k for k in list(stats_by_key) + list(ranges_by_key) if k and k not in known}
     )
 
     return render_template(
@@ -2350,27 +2371,45 @@ def import_exercises():
     if not delete_form.validate_on_submit():
         abort(400)
 
-    known = {name.lower() for (name,) in db.session.query(ExerciseCatalog.name).all()}
+    known = {
+        normalize_exercise(name)
+        for (name,) in db.session.query(ExerciseCatalog.name).all()
+    }
 
     found = {}
     for (name,) in db.session.query(UserStatistic.exercise).distinct():
-        if name and name.strip():
-            found.setdefault(name.strip().lower(), name.strip())
+        if normalize_exercise(name):
+            found.setdefault(normalize_exercise(name), ' '.join(name.split()))
     for (name,) in db.session.query(Range.exercise).distinct():
-        if name and name.strip():
-            found.setdefault(name.strip().lower(), name.strip())
+        if normalize_exercise(name):
+            found.setdefault(normalize_exercise(name), ' '.join(name.split()))
 
     added = 0
+    skipped = []
     for key, name in sorted(found.items()):
         if key in known:
             continue
-        db.session.add(ExerciseCatalog(name=name, unit='reps' if key == 'dips' else 'kg'))
-        known.add(key)
-        added += 1
+        # Un esercizio alla volta: se il nome collide con uno gia' presente
+        # (il vincolo UNIQUE distingue le maiuscole) l'errore non deve far
+        # fallire l'intero import, altrimenti non verrebbe salvato nulla
+        try:
+            db.session.add(ExerciseCatalog(name=name, unit='reps' if key == 'dips' else 'kg'))
+            db.session.commit()
+            known.add(key)
+            added += 1
+        except SQLAlchemyError:
+            db.session.rollback()
+            skipped.append(name)
 
-    db.session.commit()
-    flash(f'Importati {added} esercizi dai dati esistenti.', 'success' if added else 'info')
-    logger(current_user.id, f'Exercises imported: {added}')
+    if skipped:
+        flash(
+            f"Importati {added} esercizi. Non aggiunti: {', '.join(skipped)} "
+            f"(nome gia' presente a catalogo).",
+            'warning'
+        )
+    else:
+        flash(f'Importati {added} esercizi dai dati esistenti.', 'success' if added else 'info')
+    logger(current_user.id, f'Exercises imported: {added}, skipped: {len(skipped)}')
     return redirect(url_for('admin_exercises'))
 
 
