@@ -38,11 +38,11 @@
               </small>
             {% else %}
               <small class="text-secondary">In base al tuo RM di {{ group['user_exercise'] }} 
-                    {% if group['user_exercise'] == "Dips" %} di {% else %} a {% endif %}
+                    {% if group['unit'] == 'kg' %} a {% else %} di {% endif %}
                     
-                    {{ group['user_weight'] }} 
+                    {{ group['user_weight_label'] }} 
                   
-                    {% if group['user_exercise'] == "Dips" %} reps {% else %} Kg {% endif %}
+                    {{ group['unit_label'] }}
               </small>
               <ul class="list-group list-group-horizontal">
                 {% for range in group['ranges'] %}
@@ -51,7 +51,7 @@
                     style="border: 0px!important"
                   >
                     {{ range }}
-                    {% if group['user_exercise'] == "Dips" %} reps {% else %} Kg {% endif %}
+                    {{ group['unit_label'] }}
                   </li>
                 {% endfor %}
               </ul>

@@ -96,8 +96,8 @@ movement_choices = [
 
 class ExerciseCatalogForm(FlaskForm):
     name = StringField('Nome esercizio', validators=[DataRequired(), Length(min=2, max=100)])
-    unit = SelectField('Unita', choices=[('kg', 'Kg'), ('reps', 'Reps')], default='kg',
-                       validators=[DataRequired()])
+    unit = SelectField('Unita', choices=[('kg', 'Kg'), ('reps', 'Reps'), ('min', 'Minuti')],
+                       default='kg', validators=[DataRequired()])
     submit = SubmitField('Salva')
 
 
@@ -108,9 +108,64 @@ class DeleteExerciseForm(FlaskForm):
 class UserStatisticForm(FlaskForm):
     date = DateField(('Date'), validators=[DataRequired()], default=datetime.utcnow)
     exercise = SelectField("Exercise", choices=movement_choices, validators=[DataRequired()])
-    weight = FloatField('Weight (Kg) / Reps', validators=[Optional()])
+    weight = StringField('Weight (Kg) / Reps / Minuti', validators=[Optional()])
     #reps = IntegerField('Reps', validators=[Optional()], default=1)
     submit = SubmitField('Save')
+
+    # Unita' dell'esercizio selezionato: la imposta la vista prima di validare
+    unit = 'kg'
+
+    def set_unit(self, unit):
+        self.unit = unit or 'kg'
+
+    def validate_weight(self, field):
+        """Interpreta il valore secondo l'unita' dell'esercizio.
+
+        Per i tempi accetta 8:30 e 8.5 (entrambi 8 minuti e mezzo), ma rifiuta
+        8.30: somiglia troppo a un orario e verrebbe salvato come 8'18",
+        sbagliando in silenzio tutte le percentuali.
+        """
+        raw = (field.data or '').strip().replace(',', '.')
+        if not raw:
+            field.data = None
+            return
+
+        if self.unit == 'min':
+            if ':' in raw:
+                minutes, _, seconds = raw.partition(':')
+                if not minutes.strip().isdigit() or not seconds.strip().isdigit():
+                    raise ValidationError("Formato tempo non valido. Usa 8:30 oppure 8.5")
+                seconds_value = int(seconds.strip())
+                if seconds_value >= 60:
+                    raise ValidationError('I secondi devono essere inferiori a 60.')
+                field.data = int(minutes.strip()) + seconds_value / 60
+                return
+
+            try:
+                value = float(raw)
+            except ValueError:
+                raise ValidationError("Formato tempo non valido. Usa 8:30 oppure 8.5")
+
+            # La parte decimale oltre .59 non puo' essere una lettura oraria,
+            # quindi e' sicuramente gia' un decimale valido.
+            decimals = raw.split('.')[1] if '.' in raw else ''
+            if len(decimals) == 2 and int(decimals) < 60:
+                raise ValidationError(
+                    f"Ambiguo: per {raw.split('.')[0]} minuti e {decimals} secondi scrivi "
+                    f"{raw.replace('.', ':')}, per i decimali usa un solo decimale."
+                )
+            if value < 0:
+                raise ValidationError("Il valore non puo' essere negativo.")
+            field.data = value
+            return
+
+        try:
+            value = float(raw)
+        except ValueError:
+            raise ValidationError('Inserisci un numero valido.')
+        if value < 0:
+            raise ValidationError("Il valore non puo' essere negativo.")
+        field.data = value
 
     def set_exercise_choices(self, choices):
         """Popola la tendina con il catalogo esercizi gestito dal coach.

@@ -77,6 +77,37 @@ def inject_utils():
         random_rest_message=random_rest_message
     )
 
+# Unita di misura dei massimali gestite dal catalogo esercizi
+UNIT_LABELS = {
+    'kg': 'Kg',
+    'reps': 'reps',
+    'min': 'min',
+}
+
+
+def format_measure(value, unit):
+    """Formatta un massimale (o una sua percentuale) secondo l'unita.
+
+    Per i tempi il valore e' espresso in minuti decimali (8.5 = 8'30"),
+    quindi va reso come mm:ss: su un Test Row "85% di 8.5" deve leggersi
+    07:13, non 7.2.
+    """
+    if value is None:
+        return ''
+    if unit == 'min':
+        total_seconds = int(round(value * 60))
+        return f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
+    return f"{round(value, 1)}"
+
+
+def exercise_units():
+    """Mappa esercizio -> unita', per far reagire i form alla scelta in tendina."""
+    return {
+        row.name: row.unit
+        for row in ExerciseCatalog.query.all()
+    }
+
+
 # Modelli Utente ed Esercizio
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -178,15 +209,20 @@ class Workout(db.Model):
                 .first()
             )
 
+            unit = ExerciseCatalog.unit_for(exercise_name)
+
             formatted_ranges = []
             if user_stat and user_stat.weight:
                 for r in ranges_for_ex:
-                    weight = round(user_stat.weight * (r.value / 100), 1)
-                    formatted_ranges.append(f"{r.value}% @{weight}")
+                    value = user_stat.weight * (r.value / 100)
+                    formatted_ranges.append(f"{r.value}% @{format_measure(value, unit)}")
 
             groups.append({
                 'user_exercise': user_stat.exercise if user_stat else None,
                 'user_weight': user_stat.weight if user_stat else None,
+                'user_weight_label': format_measure(user_stat.weight, unit) if user_stat and user_stat.weight else None,
+                'unit': unit,
+                'unit_label': UNIT_LABELS.get(unit, 'Kg'),
                 'exercise': exercise_name,
                 'ranges': formatted_ranges
             })
@@ -1977,6 +2013,8 @@ def delete_performance(id):
 def user_stats():
     form = UserStatisticForm()
     form.set_exercise_choices(ExerciseCatalog.choices())
+    # L'unita' dipende dall'esercizio scelto e serve a validare il valore
+    form.set_unit(ExerciseCatalog.unit_for(form.exercise.data))
     delete_form = BulkDeleteStatsForm()
 
     if form.validate_on_submit():
@@ -2017,6 +2055,17 @@ def user_stats():
         .all()
     )
 
+    # Ogni riga porta con se' l'unita' del proprio esercizio: un Test Row
+    # va letto come 08:30, non come 8.5
+    stat_rows = []
+    for s in stats:
+        unit = ExerciseCatalog.unit_for(s.exercise)
+        stat_rows.append({
+            'stat': s,
+            'unit_label': UNIT_LABELS.get(unit, 'Kg'),
+            'value_label': format_measure(s.weight, unit) if s.weight is not None else '',
+        })
+
     exercises = [s.exercise for s in stats if s.exercise is not None]
     weights = [s.weight for s in stats if s.weight is not None]
     reps = [s.reps for s in stats if s.reps is not None]
@@ -2029,6 +2078,8 @@ def user_stats():
         form=form,
         delete_form=delete_form,
         stats=stats,
+        stat_rows=stat_rows,
+        exercise_units=exercise_units(),
         exercises=exercises,
         max_weight=max_weight,
         max_reps=max_reps,
@@ -2119,6 +2170,7 @@ def edit_stat(id):
     if request.method == 'GET':
         form.exercise.data = stat.exercise
     form.set_exercise_choices(ExerciseCatalog.choices())
+    form.set_unit(ExerciseCatalog.unit_for(form.exercise.data))
 
     if form.validate_on_submit():
         stat.date = form.date.data
@@ -2131,10 +2183,12 @@ def edit_stat(id):
 
     if request.method == 'GET':
         form.date.data = stat.date
-        form.weight.data = stat.weight
+        unit = ExerciseCatalog.unit_for(stat.exercise)
+        form.weight.data = format_measure(stat.weight, unit) if stat.weight is not None else ''
         
 
-    return render_template('edit_stat.html', title='Edit Stat', form=form, stat_id=stat.id)
+    return render_template('edit_stat.html', title='Edit Stat', form=form, stat_id=stat.id,
+                           exercise_units=exercise_units())
 
 
 @app.route('/stats/delete', methods=['POST'])

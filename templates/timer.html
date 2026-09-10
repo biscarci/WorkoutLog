@@ -432,14 +432,12 @@
           <div style="margin-top:10px;">
             {% if group['user_exercise'] %}
               <div style="font-size:0.75rem; color:#555; margin-bottom:4px;">
-                {{ group['user_exercise'] }}
-                {% if group['user_exercise'] == "Dips" %} – {{ group['user_weight'] }} reps
-                {% else %} – {{ group['user_weight'] }} Kg{% endif %}
+                {{ group['user_exercise'] }} – {{ group['user_weight_label'] }} {{ group['unit_label'] }}
               </div>
               <div>
                 {% for range in group['ranges'] %}
                   <span class="range-badge">
-                    {{ range }}{% if group['user_exercise'] == "Dips" %} reps{% else %} Kg{% endif %}
+                    {{ range }} {{ group['unit_label'] }}
                   </span>
                 {% endfor %}
               </div>

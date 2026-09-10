@@ -24,6 +24,7 @@
                 {{ render_field(form.date, class_="form-control") }}
                 {{ render_field(form.exercise, class_="form-control") }}
                 {{ render_field(form.weight, class_="form-control") }}
+                <p class="text-secondary small mt-1 mb-0" id="weightHint"></p>
                 <div class="d-flex justify-content-center mt-3">
                     {{ render_field(form.submit, class_="btn-add-workout") }}
                 </div>
@@ -43,13 +44,14 @@
                             <th style="width: 46px;"></th>
                             <th>Date</th>
                             <th>Exercise</th>
-                            <th>Weight (Kg) / Reps</th>
+                            <th>Valore</th>
                             <th>History</th>
                            <!--  <th></th> -->
                         </tr>
                     </thead>
                     <tbody style="font-size: small;">
-                        {% for s in stats %}
+                        {% for row in stat_rows %}
+                        {% set s = row.stat %}
                         <tr>
                             <td>
                                 <form method="POST" action="{{ url_for('delete_stats') }}" style="display: inline;">
@@ -66,7 +68,7 @@
                                     {{ s.exercise }}
                                 </a>
                             </td>
-                            <td>{{ s.weight if s.weight is not none else '' }}</td>
+                            <td>{{ row.value_label }} <span class="text-secondary">{{ row.unit_label }}</span></td>
                             <td>
                                 <a class="btn-action"
                                     style="height: 25px;"
@@ -77,7 +79,7 @@
                             </td>
                         </tr>
                         {% endfor %}
-                        {% if not stats %}
+                        {% if not stat_rows %}
                         <tr><td colspan="5" class="text-center">Nessuna statistica inserita</td></tr>
                         {% endif %}
                     </tbody>
@@ -91,5 +93,29 @@
 <div class="bottom-bar">
     <a class="btn btn-add-workout btn-block" href="{{ url_for('menu') }}" role="button" aria-expanded="false">Back</a>
 </div>
+
+<script>
+(function () {
+  // L'unita' cambia con l'esercizio: il formato atteso va detto prima
+  // di digitare, non dopo aver sbagliato
+  var units = {{ exercise_units|tojson }};
+  var exercise = document.getElementById('exercise');
+  var hint = document.getElementById('weightHint');
+  if (!exercise || !hint) return;
+
+  var texts = {
+    kg: 'Peso in chili, es. 102.5',
+    reps: 'Numero di ripetizioni, es. 24',
+    min: 'Tempo in mm:ss, es. 8:30 (oppure 8.5 in minuti decimali)'
+  };
+
+  function update() {
+    hint.textContent = texts[units[exercise.value] || 'kg'];
+  }
+
+  exercise.addEventListener('change', update);
+  update();
+})();
+</script>
 
 {% endblock %}

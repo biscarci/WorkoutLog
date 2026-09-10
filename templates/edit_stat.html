@@ -11,7 +11,8 @@
                 {{ render_field(form.date, class_="form-control") }}
                 {{ render_field(form.exercise, class_="form-control") }}
                 {{ render_field(form.weight, class_="form-control") }}
-               
+                <p class="text-secondary small mt-1 mb-0" id="weightHint"></p>
+
                 <div class="d-flex justify-content-center mt-3">
                     {{ render_field(form.submit, class_="btn-add-workout") }}
                 </div>
@@ -23,4 +24,26 @@
 <div class="bottom-bar">
     <a class="btn btn-outline-primary btn-block" href="{{ url_for('user_stats') }}" role="button" aria-expanded="false">Back</a>
 </div>
+
+<script>
+(function () {
+  var units = {{ exercise_units|tojson }};
+  var exercise = document.getElementById('exercise');
+  var hint = document.getElementById('weightHint');
+  if (!exercise || !hint) return;
+
+  var texts = {
+    kg: 'Peso in chili, es. 102.5',
+    reps: 'Numero di ripetizioni, es. 24',
+    min: 'Tempo in mm:ss, es. 8:30 (oppure 8.5 in minuti decimali)'
+  };
+
+  function update() {
+    hint.textContent = texts[units[exercise.value] || 'kg'];
+  }
+
+  exercise.addEventListener('change', update);
+  update();
+})();
+</script>
 {% endblock %}
