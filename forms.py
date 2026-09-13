@@ -96,9 +96,32 @@ movement_choices = [
 
 class ExerciseCatalogForm(FlaskForm):
     name = StringField('Nome esercizio', validators=[DataRequired(), Length(min=2, max=100)])
-    unit = SelectField('Unita', choices=[('kg', 'Kg'), ('reps', 'Reps'), ('min', 'Minuti')],
-                       default='kg', validators=[DataRequired()])
+    unit = SelectField(
+        'Unita',
+        choices=[
+            ('kg', 'Kg - massimale di forza'),
+            ('reps', 'Reps - ripetizioni'),
+            ('min', 'Tempo - test a cronometro'),
+            ('pace', 'Pace - min per distanza'),
+            ('distance', 'Distanza - metri'),
+            ('cal', 'Calorie'),
+        ],
+        default='kg', validators=[DataRequired()])
+    ref_distance = IntegerField('Distanza di riferimento (m)', validators=[Optional()])
+    pct_mode = SelectField(
+        'Lettura della percentuale',
+        choices=[
+            ('intensity', 'Intensita: 85% = piu lento / piu facile'),
+            ('literal', 'Letterale: 85% = valore x 0,85'),
+        ],
+        default='literal', validators=[DataRequired()])
     submit = SubmitField('Salva')
+
+    def validate_ref_distance(self, field):
+        if self.unit.data == 'pace' and not field.data:
+            raise ValidationError('Per il pace serve la distanza di riferimento (es. 500).')
+        if field.data is not None and field.data <= 0:
+            raise ValidationError('La distanza deve essere positiva.')
 
 
 class DeleteExerciseForm(FlaskForm):
@@ -130,11 +153,11 @@ class UserStatisticForm(FlaskForm):
             field.data = None
             return
 
-        if self.unit == 'min':
+        if self.unit in ('min', 'pace'):
             if ':' in raw:
                 minutes, _, seconds = raw.partition(':')
                 if not minutes.strip().isdigit() or not seconds.strip().isdigit():
-                    raise ValidationError("Formato tempo non valido. Usa 8:30 oppure 8.5")
+                    raise ValidationError("Formato non valido. Usa mm:ss (es. 1:45) oppure i minuti decimali.")
                 seconds_value = int(seconds.strip())
                 if seconds_value >= 60:
                     raise ValidationError('I secondi devono essere inferiori a 60.')
@@ -144,7 +167,7 @@ class UserStatisticForm(FlaskForm):
             try:
                 value = float(raw)
             except ValueError:
-                raise ValidationError("Formato tempo non valido. Usa 8:30 oppure 8.5")
+                raise ValidationError("Formato non valido. Usa mm:ss (es. 1:45) oppure i minuti decimali.")
 
             # La parte decimale oltre .59 non puo' essere una lettura oraria,
             # quindi e' sicuramente gia' un decimale valido.

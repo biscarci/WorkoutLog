@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap5
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, and_
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 # Importazioni del progetto locale
 from forms import (AddWorkoutForm, AddWeeklyWorkoutForm, AdminRegistrationForm, BulkDeleteStatsForm, DeleteExerciseForm, DeleteWorkoutsByDayForm, EditPerformanceForm, ExerciseCatalogForm, LoginForm, PerformanceForm,
@@ -82,22 +82,60 @@ UNIT_LABELS = {
     'kg': 'Kg',
     'reps': 'reps',
     'min': 'min',
+    'pace': 'pace',
+    'distance': 'm',
+    'cal': 'cal',
 }
+
+# Unita' espresse come durata: si scrivono e si leggono in mm:ss
+TIME_UNITS = ('min', 'pace')
+
+# Su queste unita' la percentuale vale come quota di sforzo, non come
+# moltiplicazione: andare all'85%% di un pace significa andare piu' piano
+INTENSITY_UNITS = ('min', 'pace')
 
 
 def format_measure(value, unit):
     """Formatta un massimale (o una sua percentuale) secondo l'unita.
 
-    Per i tempi il valore e' espresso in minuti decimali (8.5 = 8'30"),
-    quindi va reso come mm:ss: su un Test Row "85% di 8.5" deve leggersi
-    07:13, non 7.2.
+    Tempi e pace sono in minuti decimali (8.5 = 8'30") e vanno resi in
+    mm:ss: su un Test Row "85% di 8.5" deve leggersi 07:14, non 7.2.
+    Metri e calorie sono interi, non avrebbe senso mezzo metro.
     """
     if value is None:
         return ''
-    if unit == 'min':
+    if unit in TIME_UNITS:
         total_seconds = int(round(value * 60))
         return f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
+    if unit in ('distance', 'cal'):
+        return f"{int(round(value))}"
     return f"{round(value, 1)}"
+
+
+def unit_suffix(unit, ref_distance=None):
+    """Etichetta da mostrare accanto al valore, es. "/500m" per un pace."""
+    if unit == 'pace':
+        meters = ref_distance or 500
+        # I chilometri tondi si leggono meglio come /km che come /1000m
+        if meters % 1000 == 0:
+            km = meters // 1000
+            return '/km' if km == 1 else f'/{km}km'
+        return f'/{meters}m'
+    return UNIT_LABELS.get(unit, 'Kg')
+
+
+def apply_percentage(value, percent, unit, pct_mode='literal'):
+    """Valore corrispondente a una percentuale del massimale.
+
+    Con pct_mode "intensity" la percentuale e' una quota di sforzo: siccome
+    pace e tempo sono inversamente proporzionali alla potenza, l'85% di un
+    pace 1:45 non e' 1:29 (piu' veloce del massimale) ma 2:03.
+    """
+    if value is None or not percent:
+        return None
+    if pct_mode == 'intensity' and unit in INTENSITY_UNITS:
+        return value * 100.0 / percent
+    return value * percent / 100.0
 
 
 def normalize_exercise(name):
@@ -221,12 +259,16 @@ class Workout(db.Model):
                 .first()
             )
 
-            unit = ExerciseCatalog.unit_for(exercise_name)
+            config = ExerciseCatalog.config_for(exercise_name)
+            unit = config['unit']
+            suffix = unit_suffix(unit, config['ref_distance'])
 
             formatted_ranges = []
             if user_stat and user_stat.weight:
                 for r in ranges_for_ex:
-                    value = user_stat.weight * (r.value / 100)
+                    value = apply_percentage(
+                        user_stat.weight, r.value, unit, config['pct_mode']
+                    )
                     formatted_ranges.append(f"{r.value}% @{format_measure(value, unit)}")
 
             groups.append({
@@ -234,7 +276,7 @@ class Workout(db.Model):
                 'user_weight': user_stat.weight if user_stat else None,
                 'user_weight_label': format_measure(user_stat.weight, unit) if user_stat and user_stat.weight else None,
                 'unit': unit,
-                'unit_label': UNIT_LABELS.get(unit, 'Kg'),
+                'unit_label': suffix,
                 'exercise': exercise_name,
                 'ranges': formatted_ranges
             })
@@ -298,7 +340,13 @@ class ExerciseCatalog(db.Model):
     """Catalogo esercizi gestito dal coach, usato per le percentuali sui massimali."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False, unique=True)
-    unit = db.Column(db.String(20), nullable=False, default='kg')  # 'kg' oppure 'reps'
+    # kg | reps | min | pace | distance | cal
+    unit = db.Column(db.String(20), nullable=False, default='kg')
+    # Metri di riferimento del pace (500 per il remo, 1000 per la corsa)
+    ref_distance = db.Column(db.Integer, nullable=True)
+    # Come si legge la percentuale: 'intensity' la interpreta come quota di
+    # sforzo (85% di un pace = piu' lento), 'literal' moltiplica il valore
+    pct_mode = db.Column(db.String(20), nullable=False, default='literal')
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -314,16 +362,34 @@ class ExerciseCatalog(db.Model):
         return [(r.name, r.name) for r in rows]
 
     @staticmethod
-    def unit_for(exercise_name):
-        """Unita' di misura di un esercizio, con match case-insensitive."""
-        if not exercise_name:
-            return 'kg'
-        row = (
+    def find_by_name(exercise_name):
+        """Voce di catalogo corrispondente al nome, ignorando maiuscole e spazi."""
+        key = normalize_exercise(exercise_name)
+        if not key:
+            return None
+        return (
             ExerciseCatalog.query
-            .filter(func.lower(ExerciseCatalog.name) == exercise_name.strip().lower())
+            .filter(func.lower(func.trim(ExerciseCatalog.name)) == key)
             .first()
         )
+
+    @staticmethod
+    def unit_for(exercise_name):
+        """Unita' di misura di un esercizio, con match case-insensitive."""
+        row = ExerciseCatalog.find_by_name(exercise_name)
         return row.unit if row else 'kg'
+
+    @staticmethod
+    def config_for(exercise_name):
+        """Unita', distanza di riferimento e lettura delle percentuali."""
+        row = ExerciseCatalog.find_by_name(exercise_name)
+        if not row:
+            return {'unit': 'kg', 'ref_distance': None, 'pct_mode': 'literal'}
+        return {
+            'unit': row.unit,
+            'ref_distance': row.ref_distance,
+            'pct_mode': row.pct_mode or 'literal',
+        }
 
 
 class Log(db.Model):
@@ -601,6 +667,109 @@ def seed_exercises_command():
 
 
 app.cli.add_command(seed_exercises_command)
+
+
+# Fusioni confermate dal coach: grafie diverse dello stesso movimento.
+# La chiave e' il nome normalizzato, il valore il nome da tenere.
+EXERCISE_MERGES = {
+    'clean and jerk': 'Clean & Jerk',
+    'overheanr squat': 'Overhead Squat',
+}
+
+
+def _canonical_exercise_name(name, catalog_names):
+    """Nome definitivo di un esercizio: fusione esplicita, oppure la grafia
+    gia' presente a catalogo, oppure il nome ripulito dagli spazi."""
+    key = normalize_exercise(name)
+    if key in EXERCISE_MERGES:
+        return EXERCISE_MERGES[key]
+    if key in catalog_names:
+        return catalog_names[key]
+    return ' '.join(str(name or '').split())
+
+
+@click.command('cleanup-exercises')
+@click.option('--apply', 'apply_changes', is_flag=True,
+              help='Esegue le modifiche. Senza questo flag mostra solo il piano.')
+@with_appcontext
+def cleanup_exercises_command(apply_changes):
+    """Unifica le grafie duplicate degli esercizi (Split jerk -> Split Jerk).
+
+    Senza --apply e' una simulazione che non scrive nulla.
+    """
+    catalog = ExerciseCatalog.query.all()
+
+    # La grafia maggioritaria nei massimali vince sulle altre
+    usage = defaultdict(Counter)
+    for (name,) in db.session.query(UserStatistic.exercise).filter(UserStatistic.exercise.isnot(None)):
+        cleaned = ' '.join(str(name).split())
+        if cleaned:
+            usage[normalize_exercise(name)][cleaned] += 1
+
+    catalog_names = {}
+    for key, counter in usage.items():
+        catalog_names[key] = counter.most_common(1)[0][0]
+    for ex in catalog:
+        catalog_names.setdefault(normalize_exercise(ex.name), ' '.join(ex.name.split()))
+
+    stat_updates, range_updates = [], []
+    for row in UserStatistic.query.filter(UserStatistic.exercise.isnot(None)).all():
+        target = _canonical_exercise_name(row.exercise, catalog_names)
+        if row.exercise != target:
+            stat_updates.append((row, target))
+    for row in Range.query.all():
+        target = _canonical_exercise_name(row.exercise, catalog_names)
+        if row.exercise != target:
+            range_updates.append((row, target))
+
+    # Il catalogo si raggruppa sul nome di DESTINAZIONE: due voci che
+    # confluiscono nella stessa vanno fuse, non rinominate (il nome e' unique)
+    by_target = defaultdict(list)
+    for ex in catalog:
+        by_target[_canonical_exercise_name(ex.name, catalog_names)].append(ex)
+
+    renames, removals = [], []
+    for target, rows in by_target.items():
+        keep = next((r for r in rows if r.name == target), rows[0])
+        removals.extend(r for r in rows if r.id != keep.id)
+        if keep.name != target:
+            renames.append((keep, target))
+
+    click.echo('--- PIANO ---')
+    for row, target in stat_updates:
+        click.echo(f'  massimale   {row.exercise!r} -> {target!r}')
+    for row, target in range_updates:
+        click.echo(f'  percentuale {row.exercise!r} -> {target!r}')
+    for ex, target in renames:
+        click.echo(f'  catalogo    {ex.name!r} -> {target!r}')
+    for ex in removals:
+        click.echo(f'  catalogo    {ex.name!r} -> ELIMINA (doppione)')
+    if not (stat_updates or range_updates or renames or removals):
+        click.echo('  Niente da fare: gli esercizi sono gia coerenti.')
+        return
+
+    if not apply_changes:
+        click.echo('\nSimulazione: nessuna modifica salvata. Rilancia con --apply.')
+        return
+
+    for row, target in stat_updates:
+        row.exercise = target
+    for row, target in range_updates:
+        row.exercise = target
+    for ex in removals:
+        db.session.delete(ex)
+    db.session.flush()  # le eliminazioni precedono le rinomine, il nome e' unique
+    for ex, target in renames:
+        ex.name = target
+    db.session.commit()
+
+    click.echo(
+        f'\nFatto: {len(stat_updates)} massimali, {len(range_updates)} percentuali, '
+        f'{len(renames)} rinomine e {len(removals)} doppioni rimossi.'
+    )
+
+
+app.cli.add_command(cleanup_exercises_command)
 
 
 @app.route('/admin/dashboard', methods=['GET'])
@@ -2071,10 +2240,11 @@ def user_stats():
     # va letto come 08:30, non come 8.5
     stat_rows = []
     for s in stats:
-        unit = ExerciseCatalog.unit_for(s.exercise)
+        config = ExerciseCatalog.config_for(s.exercise)
+        unit = config['unit']
         stat_rows.append({
             'stat': s,
-            'unit_label': UNIT_LABELS.get(unit, 'Kg'),
+            'unit_label': unit_suffix(unit, config['ref_distance']),
             'value_label': format_measure(s.weight, unit) if s.weight is not None else '',
         })
 
@@ -2248,12 +2418,19 @@ def admin_exercises():
             else:
                 existing.is_active = True
                 existing.unit = form.unit.data
+                existing.ref_distance = form.ref_distance.data
+                existing.pct_mode = form.pct_mode.data
                 db.session.commit()
                 flash(f"Esercizio '{existing.name}' riattivato.", 'success')
                 logger(current_user.id, f'Exercise reactivated: {existing.name}')
             return redirect(url_for('admin_exercises'))
 
-        db.session.add(ExerciseCatalog(name=name, unit=form.unit.data))
+        db.session.add(ExerciseCatalog(
+            name=name,
+            unit=form.unit.data,
+            ref_distance=form.ref_distance.data,
+            pct_mode=form.pct_mode.data,
+        ))
         db.session.commit()
         flash(f"Esercizio '{name}' aggiunto.", 'success')
         logger(current_user.id, f'Exercise added: {name}')
@@ -2291,6 +2468,7 @@ def admin_exercises():
         key = normalize_exercise(ex.name)
         rows.append({
             'exercise': ex,
+            'unit_label': unit_suffix(ex.unit, ex.ref_distance),
             'stats': stats_by_key.get(key, 0),
             'ranges': ranges_by_key.get(key, 0),
         })
@@ -2309,6 +2487,58 @@ def admin_exercises():
         rows=rows,
         orphans=orphans,
     )
+
+
+@app.route('/admin/exercises/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_exercise(id):
+    if not current_user.is_superuser:
+        abort(403)
+
+    exercise = ExerciseCatalog.query.get_or_404(id)
+    form = ExerciseCatalogForm(obj=exercise)
+
+    if form.validate_on_submit():
+        name = (form.name.data or '').strip()
+        clash = (
+            ExerciseCatalog.query
+            .filter(func.lower(ExerciseCatalog.name) == name.lower())
+            .filter(ExerciseCatalog.id != exercise.id)
+            .first()
+        )
+        if clash:
+            flash(f"Esiste gia' un esercizio chiamato '{clash.name}'.", 'warning')
+            return render_template('edit_exercise_catalog.html', title='Modifica esercizio',
+                                   form=form, exercise=exercise)
+
+        previous_name = exercise.name
+        exercise.name = name
+        exercise.unit = form.unit.data
+        exercise.ref_distance = form.ref_distance.data
+        exercise.pct_mode = form.pct_mode.data
+
+        # Il nome e' la chiave con cui massimali e percentuali trovano
+        # l'esercizio: se cambia vanno riallineati, altrimenti i calcoli
+        # smettono di agganciarsi
+        renamed = 0
+        if normalize_exercise(previous_name) != normalize_exercise(name):
+            for row in UserStatistic.query.filter(
+                    func.lower(func.trim(UserStatistic.exercise)) == normalize_exercise(previous_name)).all():
+                row.exercise = name
+                renamed += 1
+            for row in Range.query.filter(
+                    func.lower(func.trim(Range.exercise)) == normalize_exercise(previous_name)).all():
+                row.exercise = name
+                renamed += 1
+
+        db.session.commit()
+        suffix = f' ({renamed} riferimenti aggiornati)' if renamed else ''
+        flash(f"Esercizio '{name}' aggiornato.{suffix}", 'success')
+        logger(current_user.id, f'Exercise updated: {name}')
+        return redirect(url_for('admin_exercises'))
+
+    return render_template('edit_exercise_catalog.html', title='Modifica esercizio',
+                           form=form, exercise=exercise)
 
 
 @app.route('/admin/exercises/<int:id>/toggle', methods=['POST'])

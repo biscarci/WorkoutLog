@@ -60,12 +60,19 @@
     <div class="col-6 col-sm-3">
       {{ render_field(form.unit, class_="form-select") }}
     </div>
+    <div class="col-6 col-sm-3">
+      {{ render_field(form.ref_distance, class_="form-control", placeholder="500 (solo pace)") }}
+    </div>
+    <div class="col-6 col-sm-3">
+      {{ render_field(form.pct_mode, class_="form-select") }}
+    </div>
     <div class="col-12">
       <p class="text-secondary small mb-2">
-        <strong>Kg</strong> per i massimali di forza · <strong>Reps</strong> per i ginnici ·
-        <strong>Minuti</strong> per i test a tempo (Test Row, Test Corsa).
-        Con i minuti il massimale si scrive in minuti decimali: 8.5 = 8'30", e le percentuali
-        vengono mostrate come mm:ss.
+        <strong>Kg</strong> forza · <strong>Reps</strong> ginnici · <strong>Tempo</strong> test a cronometro ·
+        <strong>Pace</strong> monostrutturali (min per distanza) · <strong>Distanza</strong> metri ·
+        <strong>Calorie</strong>.
+        Tempi e pace si scrivono in mm:ss (1:45) e con la lettura a intensita una percentuale
+        piu bassa rende il lavoro piu lento. Tocca un esercizio per configurarlo.
       </p>
     </div>
     <div class="col-6 col-sm-3 d-grid">
@@ -93,13 +100,20 @@
     {% for row in rows %}
     <div class="ex-row {% if not row.exercise.is_active %}inactive{% endif %}">
       <div class="flex-grow-1">
-        <div class="ex-name">{{ row.exercise.name }}</div>
+        <a href="{{ url_for('edit_exercise', id=row.exercise.id) }}"
+           class="ex-name" style="text-decoration:none;">{{ row.exercise.name }}</a>
         <div class="ex-meta">
-          <span class="unit-badge">{{ row.exercise.unit }}</span>
+          <span class="unit-badge">{{ row.unit_label }}</span>
+          {% if row.exercise.pct_mode == 'intensity' %}
+            <span class="unit-badge">intensita</span>
+          {% endif %}
           {{ row.stats }} massimali · {{ row.ranges }} percentuali
           {% if not row.exercise.is_active %} · disattivato{% endif %}
         </div>
       </div>
+
+      <a class="btn btn-action" href="{{ url_for('edit_exercise', id=row.exercise.id) }}"
+         title="Modifica"><i class="bi bi-pencil"></i></a>
 
       <form method="POST" action="{{ url_for('toggle_exercise', id=row.exercise.id) }}">
         {{ delete_form.hidden_tag() }}

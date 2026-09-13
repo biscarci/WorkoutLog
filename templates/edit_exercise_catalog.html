@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block content %}
+<style>
+  h1 { font-size: 30px; }
+  .hint { color: #666; font-size: 0.8rem; }
+</style>
+
+<div class="container">
+  <h1 class="text-center">Modifica esercizio</h1>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+      <form method="POST" action="{{ url_for('edit_exercise', id=exercise.id) }}">
+        {{ form.hidden_tag() }}
+
+        {{ render_field(form.name, class_="form-control") }}
+        {{ render_field(form.unit, class_="form-select") }}
+
+        <div id="paceBox">
+          {{ render_field(form.ref_distance, class_="form-control", placeholder="500") }}
+          <p class="hint mb-3">
+            Distanza su cui si legge il pace: 500 per remo e ski, 1000 per la corsa.
+          </p>
+        </div>
+
+        {{ render_field(form.pct_mode, class_="form-select") }}
+        <p class="hint mb-3" id="pctHint"></p>
+
+        <div class="d-flex justify-content-center mt-3">
+          <button type="submit" class="btn btn-add-workout">SALVA</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <a class="btn btn-outline-primary btn-block" href="{{ url_for('admin_exercises') }}" role="button">Indietro</a>
+</div>
+
+<script>
+(function () {
+  var unit = document.getElementById('unit');
+  var mode = document.getElementById('pct_mode');
+  var paceBox = document.getElementById('paceBox');
+  var hint = document.getElementById('pctHint');
+  if (!unit || !mode) return;
+
+  function update() {
+    // La distanza di riferimento serve solo al pace
+    paceBox.hidden = unit.value !== 'pace';
+
+    var isTime = unit.value === 'pace' || unit.value === 'min';
+    hint.textContent = mode.value === 'intensity'
+      ? (isTime
+          ? 'Con l\u2019intensita una percentuale piu bassa rende il lavoro piu lento: 85% di 1:45 diventa 2:03.'
+          : 'Intensita: la percentuale riduce lo sforzo richiesto.')
+      : 'Letterale: il valore viene moltiplicato per la percentuale (85% di 100 = 85).';
+  }
+
+  unit.addEventListener('change', function () {
+    // Per tempi e pace l\u2019intensita e\u2019 quasi sempre la lettura giusta
+    if (unit.value === 'pace' || unit.value === 'min') mode.value = 'intensity';
+    else mode.value = 'literal';
+    update();
+  });
+  mode.addEventListener('change', update);
+  update();
+})();
+</script>
+{% endblock %}
