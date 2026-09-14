@@ -138,6 +138,33 @@ def apply_percentage(value, percent, unit, pct_mode='literal'):
     return value * percent / 100.0
 
 
+def apply_offset(value, seconds, unit):
+    """Massimale spostato di N secondi, per i lavori espressi come "+10\"".
+
+    Ha senso solo su pace e tempi, dove il coach ragiona in secondi di
+    scarto dal test invece che in percentuale.
+    """
+    if value is None or seconds is None:
+        return None
+    if unit not in TIME_UNITS:
+        return value
+    return max(0.0, value + seconds / 60.0)
+
+
+def range_label(range_row, reference, config):
+    """Etichetta di un range: "85% @02:12" oppure "+10\" @02:02"."""
+    unit = config['unit']
+    if getattr(range_row, 'kind', 'pct') == 'offset' and unit in TIME_UNITS:
+        result = apply_offset(reference, range_row.value, unit)
+        sign = '+' if range_row.value >= 0 else ''
+        return f'{sign}{range_row.value}\" @{format_measure(result, unit)}'
+    if getattr(range_row, 'kind', 'pct') == 'offset':
+        # Unita' senza senso per un offset: mostriamo il massimale pieno
+        return f'100% @{format_measure(reference, unit)}'
+    result = apply_percentage(reference, range_row.value, unit, config['pct_mode'])
+    return f'{range_row.value}% @{format_measure(result, unit)}'
+
+
 def normalize_exercise(name):
     """Chiave di confronto fra esercizi scritti in modo diverso.
 
@@ -265,11 +292,9 @@ class Workout(db.Model):
 
             formatted_ranges = []
             if user_stat and user_stat.weight:
-                for r in ranges_for_ex:
-                    value = apply_percentage(
-                        user_stat.weight, r.value, unit, config['pct_mode']
-                    )
-                    formatted_ranges.append(f"{r.value}% @{format_measure(value, unit)}")
+                formatted_ranges = [
+                    range_label(r, user_stat.weight, config) for r in ranges_for_ex
+                ]
 
             groups.append({
                 'user_exercise': user_stat.exercise if user_stat else None,
@@ -286,6 +311,9 @@ class Workout(db.Model):
 class Range(db.Model):  # Usa db.Model, non Base
     id = db.Column(db.Integer, primary_key=True)
     value = db.Column(db.Integer, nullable=False)
+    # 'pct' = percentuale del massimale, 'offset' = secondi da sommare al pace
+    # (+10 vale "dieci secondi piu' lento del test", -5 il contrario)
+    kind = db.Column(db.String(10), nullable=False, default='pct')
     exercise = db.Column(db.String(200), nullable=False)  # Specifica lunghezza
     order = db.Column(db.Integer, nullable=False)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)  # Nome consistente
@@ -496,6 +524,26 @@ def _parse_datetime(value):
     except ValueError:
         return None
 
+def _parse_range_token(raw):
+    """Interpreta un singolo valore di ranges.
+
+    Restituisce (valore, tipo): il segno esplicito marca un offset in secondi
+    ("+10" = dieci secondi piu' lento del test), il numero nudo una percentuale.
+    """
+    text = str(raw or '').strip()
+    if not text:
+        return None
+    kind = 'offset' if text[0] in '+-' else 'pct'
+    value = _parse_int(text)
+    if value is None:
+        return None
+    if kind == 'pct' and value <= 0:
+        return None
+    if kind == 'offset' and value == 0:
+        return None
+    return value, kind
+
+
 def _parse_ranges_input(value):
     text = _parse_str(value)
     if text is None:
@@ -511,12 +559,25 @@ def _parse_ranges_input(value):
         raw_item = raw_item.strip()
         if not raw_item:
             continue
-        parsed = _parse_int(raw_item)
-        if parsed is None:
+        # Il segno esplicito distingue un offset in secondi (+10, -5) da una
+        # percentuale (85): "+10" e' come lo scrive il coach, "10 secondi piu'
+        # lento del test"
+        token = _parse_range_token(raw_item)
+        if token is None:
             raise ValueError(f'Valore range non valido: {raw_item}')
-        ranges.append(parsed)
+        ranges.append({'value': token[0], 'kind': token[1]})
     if not ranges:
         raise ValueError('Nessun range valido trovato.')
+
+    # Un offset in secondi ha senso solo dove il massimale e' un tempo:
+    # meglio dirlo subito al coach che mostrare un numero sbagliato all'atleta
+    if any(item['kind'] == 'offset' for item in ranges):
+        unit = ExerciseCatalog.unit_for(exercise)
+        if unit not in TIME_UNITS:
+            raise ValueError(
+                f"Gli scarti in secondi (+10, -5) valgono solo su pace e tempi. "
+                f"'{exercise}' e' in {UNIT_LABELS.get(unit, unit)}: usa una percentuale."
+            )
     return {"exercise": exercise, "ranges": ranges}
 
 
@@ -1836,9 +1897,10 @@ def add_workout():
 
         order_index = 0
         for payload in payloads:
-            for value in payload["ranges"]:
+            for item in payload["ranges"]:
                 db.session.add(Range(
-                    value=value,
+                    value=item["value"],
+                    kind=item["kind"],
                     exercise=payload["exercise"],
                     order=order_index,
                     workout_id=w.id
@@ -1892,8 +1954,12 @@ def add_weekly_workouts():
                         if not exercise_name or not ranges_values:
                             continue
                         for order_index, range_value in enumerate(ranges_values):
+                            token = _parse_range_token(range_value)
+                            if token is None:
+                                continue
                             r = Range(
-                                value=range_value,
+                                value=token[0],
+                                kind=token[1],
                                 exercise=exercise_name,
                                 order=group_index * 100 + order_index,  # mantieni l'ordine tra gruppi
                                 workout_id=w.id
@@ -1902,8 +1968,12 @@ def add_weekly_workouts():
                 elif w_data.get("exercise_range") and w_data.get("ranges"):
                     db.session.flush()  # Ottieni l'ID del workout appena creato
                     for order_index, range_value in enumerate(w_data.get("ranges", [])):
+                        token = _parse_range_token(range_value)
+                        if token is None:
+                            continue
                         r = Range(
-                            value=range_value,
+                            value=token[0],
+                            kind=token[1],
                             exercise=w_data.get("exercise_range", ""),
                             order=order_index,
                             workout_id=w.id
@@ -1984,9 +2054,10 @@ def edit_workout(id):
         # reinserisci i range
         order_index = 0
         for payload in payloads:
-            for value in payload["ranges"]:
+            for item in payload["ranges"]:
                 db.session.add(Range(
-                    value=value,
+                    value=item["value"],
+                    kind=item["kind"],
                     exercise=payload["exercise"],
                     order=order_index,
                     workout_id=w.id
@@ -2008,12 +2079,17 @@ def edit_workout(id):
         # ricostruisci i campi ranges
         grouped = defaultdict(list)
         for r in w.ranges:
-            grouped[r.exercise].append((r.order, r.value))
+            grouped[r.exercise].append((r.order, r.value, r.kind))
 
         reconstructed = []
         for exercise, items in grouped.items():
             items.sort(key=lambda x: x[0])
-            values = [str(v) for _, v in items]
+            # Gli offset tornano col segno, altrimenti "+10" si rileggerebbe
+            # come una percentuale cambiando significato al workout
+            values = [
+                (f'+{value}' if kind == 'offset' and value >= 0 else str(value))
+                for _, value, kind in items
+            ]
             reconstructed.append(f"{','.join(values)}@{exercise}")
 
         form.ranges1.data = reconstructed[0] if len(reconstructed) > 0 else ''
