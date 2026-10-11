@@ -9,3 +9,5 @@ htmlcov/
 .tox/
 docs/_build/
 instance/*.db
+# Export DB (contiene hash password ed email)
+workoutlog_export_*.csv

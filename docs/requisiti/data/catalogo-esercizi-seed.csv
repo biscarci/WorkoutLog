@@ -1,0 +1,130 @@
+name,category,unit,ref_distance,pct_mode,test_types,aliases_visti_nei_dati,presente_in_catalogo_legacy,fonte
+Back Squat,weightlifting,kg,,literal,1rm;3rm;5rm,back squat,si,catalogo+massimali+range
+Low Bar Back Squat,weightlifting,kg,,literal,1rm;3rm;5rm,low bar back squat;low bar back squat (box),no,titoli workout
+Tempo Back Squat,weightlifting,kg,,literal,1rm;3rm,tempo back squat (5.1.X.1),no,descrizioni
+Front Squat,weightlifting,kg,,literal,1rm;3rm;5rm,front squat,si,catalogo+massimali+range
+Tempo Front Squat,weightlifting,kg,,literal,1rm;3rm,tempo front squat (3.0.X.1),no,titoli workout
+Pin Front Squat,weightlifting,kg,,literal,1rm;3rm,pin front squat,no,descrizioni
+Overhead Squat,weightlifting,kg,,literal,1rm;3rm;5rm,overhead squat;ohs;tempo overhead squat,si,catalogo+descrizioni
+Squat Snatch,weightlifting,kg,,literal,1rm;3rm,squat snatch;low hang squat snatch;pause squat snatch;tempo squat snatch;hang squat snatch;hip squat snatch;hip parallel snatch,si,catalogo+massimali+range (49 range)
+Power Snatch,weightlifting,kg,,literal,1rm;3rm,power snatch;x power snatch;pause power snatch,si,catalogo+massimali+range
+Hang Snatch,weightlifting,kg,,literal,1rm;3rm,hang snatch;hang power snatch;db hang snatch,si,catalogo+titoli
+Muscle Snatch,weightlifting,kg,,literal,1rm;3rm,muscle snatch;tempo muscle snatch,no,descrizioni
+Tall Snatch,weightlifting,kg,,literal,3rm;5rm,tall snatch,no,descrizioni
+Snatch Balance,weightlifting,kg,,literal,1rm;3rm,snatch balance,no,titoli workout (7)
+Snatch Pull,weightlifting,kg,,literal,1rm;3rm,snatch pull,no,descrizioni
+Squat Clean,weightlifting,kg,,literal,1rm;3rm,squat clean;tempo squat clean;tempo squat cean,si,catalogo+massimali+range
+Power Clean,weightlifting,kg,,literal,1rm;3rm,power clean;hang power clean;hang power cleans;syn power clean,si,catalogo+massimali+range
+Hang Squat Clean,weightlifting,kg,,literal,1rm;3rm,hang squat clean;rm hang squat clean;hang parallel clean,no,descrizioni
+Clean Pull,weightlifting,kg,,literal,1rm;3rm,clean pull;floating clean pull,no,descrizioni
+Clean & Jerk,weightlifting,kg,,literal,1rm;3rm,clean & jerk;clean and jerk;cnj;power cnj;worm cnj;clean n jerk;hang clean n jerk,si,catalogo+massimali
+Split Jerk,weightlifting,kg,,literal,1rm;3rm,split jerk,si,catalogo+massimali+range
+Push Jerk,weightlifting,kg,,literal,1rm;3rm,push jerk,si,catalogo+massimali
+Behind the Neck Push Jerk (snatch grip),weightlifting,kg,,literal,1rm;3rm;5rm,b. neck push jerk snatch grip,no,descrizioni
+Push Press,weightlifting,kg,,literal,1rm;3rm;5rm,push press;db push press;pause kb. push press,si,catalogo+massimali+range
+Shoulder Press,weightlifting,kg,,literal,1rm;3rm;5rm,shoulder press;strict press;seated db shoulder press,si,catalogo+massimali
+Shoulder to Overhead,weightlifting,kg,,literal,1rm;3rm,stoh;shoulder to overheads;double kb stoh,no,descrizioni
+Sots Press,weightlifting,kg,,literal,3rm;5rm,sots press;empty bb sots press;db. alt. sots press,no,descrizioni
+Thruster,weightlifting,kg,,literal,1rm;3rm;5rm,thruster;db thruster;db. thruster;kb thruster,si,catalogo+massimali
+Bench Press,weightlifting,kg,,literal,1rm;3rm;5rm,bench press;db. bench press;tempo db bench press;tempo bench press;bench press (narrow grip);db. bench press inc. 20°,si,catalogo+massimali+range
+Deadlift,weightlifting,kg,,literal,1rm;3rm;5rm,"deadlift;deadlifts;double kb deadlift;kb deadlift;axle bar deadlift;deadlift deadstop;deadlift (stop 2"" below the knees)",si,catalogo+massimali+range
+Romanian Deadlift,weightlifting,kg,,literal,3rm;5rm,db romanian deadlift;db single leg romanian deadlift;pvc single leg romanian deadlift;db. romanian deadlift,no,descrizioni
+Hip Thrust,weightlifting,kg,,literal,3rm;5rm,hip thrust bb.,no,titoli workout
+Bulgarian Split Squat,weightlifting,kg,,literal,5rm,bb. bulgarian split squat;db bulgarian split squat;db. bulgarian s. squat,no,descrizioni
+Seal Row,weightlifting,kg,,literal,5rm,bb. seal row on bench;db row on bench,no,descrizioni
+Pendlay Row,weightlifting,kg,,literal,3rm;5rm,pendlay row,no,descrizioni
+Good Morning,weightlifting,kg,,literal,5rm,banded good morning,no,descrizioni
+Devil Press,weightlifting,kg,,literal,,devil press;devils press;alt. devil press,no,descrizioni
+DB Snatch,weightlifting,kg,,literal,1rm,alt. db. snatch;db hang snatch,no,descrizioni
+Sandbag Clean,weightlifting,kg,,literal,1rm,sandbag clean;sand bag clean,no,descrizioni
+Wall Ball,weightlifting,reps,,literal,max_reps,wall ball;wall balls;wall ball ping pong,no,descrizioni
+Row,monostructural,pace,500,intensity,pace:500m;time:1k;time:2k;time:5k,cal row;cal. row;k row;m row,no,descrizioni (24 occorrenze)
+Ski Erg,monostructural,pace,500,intensity,pace:500m;time:1k;time:2k;time:5k,cal ski;cal ski erg;ski erg,no,descrizioni (15)
+Bike Erg,monostructural,pace,1000,intensity,pace:1k;time:2k;time:4k;time:10k,cal bike erg;bike erg;m bikeerg;k bike erg,no,descrizioni
+Assault Bike,monostructural,cal,,literal,calories;time,cal ass. bike;cal ass;cal. ass;ass. bike;cal echo bike;echo bike,no,descrizioni
+Run,monostructural,pace,1000,intensity,pace:1k;time:400m;time:1k;time:2k;time:5k,run;shuttle run;s. run,no,titoli+descrizioni
+Double Under,monostructural,reps,,literal,max_reps,d. under;d.under;double under;heavy d. under,no,descrizioni
+Double Under Cross Over,monostructural,reps,,literal,max_reps,d. under cross over;cross over;d. cross over,no,descrizioni
+Pull-up,bodyweight,reps,,literal,max_reps,pull up;pull-ups;c2b or pull up,no,descrizioni
+Strict Pull-up,bodyweight,reps,,literal,max_reps;1rm,st. pull up;wide strict pull up;pause on top st. pull up weighted,no,descrizioni
+Weighted Strict Pull-up,bodyweight,kg,,literal,1rm;3rm;5rm,st. pull up weighted,no,descrizioni
+Strict Chin-up,bodyweight,reps,,literal,max_reps;1rm,st. chin up,no,descrizioni
+Chest to Bar,bodyweight,reps,,literal,max_reps,chest to bar;c2b;x chest to bar,no,descrizioni (12)
+Bar Muscle-up,bodyweight,reps,,literal,max_reps,bar muscle up;bar muscle up or pull up,no,descrizioni (13)
+Ring Muscle-up,bodyweight,reps,,literal,max_reps,ring muscle up;ring m. up;ring/bar muscle up,no,descrizioni
+Toes to Bar,bodyweight,reps,,literal,max_reps,toes to bar;t2b;tempo floor toes to rig,no,descrizioni (14)
+Handstand Push-up,bodyweight,reps,,literal,max_reps,hspu;x max hspu,no,descrizioni
+Strict Handstand Push-up,bodyweight,reps,,literal,max_reps,st. hspu;s. hspu;def st. hspu,no,descrizioni
+Deficit Handstand Push-up,bodyweight,reps,,literal,max_reps,deficit hspu,no,descrizioni
+Wall Facing Handstand Push-up,bodyweight,reps,,literal,max_reps,wall face hspu,no,descrizioni
+Handstand Walk,skill,distance,,literal,distance,hsw;mt hsw;hsw or variant,no,descrizioni
+Wall Walk,bodyweight,reps,,literal,max_reps,wall walks,no,descrizioni
+Rope Climb,bodyweight,reps,,literal,max_reps,rope climb;rope climb variant,no,descrizioni
+Legless Rope Climb,bodyweight,reps,,literal,max_reps,legless rope climb;seated legless rope climb,no,descrizioni
+Dips,bodyweight,reps,,literal,max_reps,dips;dip on matador;tempo dip on matador weighted,si,catalogo+massimali+range
+Weighted Dips,bodyweight,kg,,literal,1rm;3rm;5rm,dip on matador weighted,no,descrizioni
+Ring Dip,bodyweight,reps,,literal,max_reps,ring dip,no,derivato
+Push-up,bodyweight,reps,,literal,max_reps,push up;push-ups;plyo power push up;band on rack push up,no,descrizioni
+Air Squat,bodyweight,reps,,literal,max_reps,air squats,no,descrizioni
+Pistol Squat,bodyweight,reps,,literal,max_reps,pistol squat,no,descrizioni
+Box Jump,bodyweight,reps,,literal,max_reps,box jump;seated box jump;drop box + power squat jump,no,descrizioni
+Box Jump Over,bodyweight,reps,,literal,max_reps,box jump over;box jet over,no,descrizioni
+Box Step-up,bodyweight,reps,,literal,max_reps,db box step up;db. box step up;empty bb. box step up;bb. front rack box step up,no,descrizioni
+Burpee,bodyweight,reps,,literal,max_reps,burpees,no,derivato
+Burpee over Bar,bodyweight,reps,,literal,max_reps,burpees over bar;burpees touch bar;syn burpees over bb;bbjo complex;burpees box jump over,no,descrizioni
+Burpee over Line,bodyweight,reps,,literal,max_reps,burpees ov. line;burpees over line,no,descrizioni
+Burpee Lateral DB,bodyweight,reps,,literal,max_reps,burpees lateral db,no,descrizioni
+Burpee Box Step-up,bodyweight,reps,,literal,max_reps,db. burpees box step up,no,descrizioni
+Sit-up,bodyweight,reps,,literal,max_reps,ab-mat sit up;db. l sit up;l sit up;banded sit ups;db sit ups;db. sit up,no,descrizioni
+V-up,bodyweight,reps,,literal,max_reps,v up;v_up,no,descrizioni
+Hollow Rock,bodyweight,reps,,literal,max_reps,hollow rock;banded hollow rock,no,descrizioni
+Hollow Hold,bodyweight,min,,literal,hold,hollow hold,no,descrizioni
+L-sit,bodyweight,min,,literal,hold,l_sit on bar;l sit,no,descrizioni
+Dead Hang,bodyweight,min,,literal,hold,dead hang on bar,no,descrizioni
+Plank,bodyweight,min,,literal,hold,weighted plank;star plank;db. plank rotation,no,descrizioni
+Farmer Carry,bodyweight,distance,,literal,distance,db suite case carry;db suitcase carry,no,descrizioni
+Overhead Carry,bodyweight,distance,,literal,distance,overhead carry 1 db;db overhead carry,no,descrizioni
+Front Rack Walk,bodyweight,distance,,literal,distance,kb. front rack walk,no,descrizioni
+Walking Lunge,bodyweight,distance,,literal,distance,db. walking lunges;db. overhead walking lunges;sand bag bear hug lunges,no,descrizioni
+Sandbag Carry,bodyweight,distance,,literal,distance,sand bag bear hug carry;sangbag bear hug hold,no,descrizioni
+Kang Squat,bodyweight,reps,,literal,max_reps,kb. kang squat,no,descrizioni
+Windmill,bodyweight,reps,,literal,max_reps,windmill kb,no,descrizioni
+Face Pull,bodyweight,reps,,literal,max_reps,banded face pull,no,descrizioni
+Pallof Press,bodyweight,reps,,literal,max_reps,banded kneeling pallof press,no,descrizioni
+Dead Bug,bodyweight,reps,,literal,max_reps,banded dead bug,no,descrizioni
+Psoas March,bodyweight,min,,literal,hold,psoas march,no,descrizioni
+Lateral Raise,bodyweight,reps,,literal,max_reps,db. lateral raises;db. banded lateral raises,no,descrizioni
+Bicep Curl,bodyweight,reps,,literal,max_reps,alt. db. curl bicep,no,descrizioni
+Tricep Push Down,bodyweight,reps,,literal,max_reps,banded push down,no,descrizioni
+French Press,bodyweight,reps,,literal,max_reps,tempo db french press,no,descrizioni
+Ring Ice Cream Maker,skill,reps,,literal,max_reps,ring ice cream maker,no,descrizioni
+GHD Sit-up,bodyweight,reps,,literal,max_reps,ghd,no,derivato
+Muscle Clean,weightlifting,kg,,literal,3rm;5rm,tempo muscle clean empty;muscle clean,no,export completo
+Tall Clean,weightlifting,kg,,literal,3rm;5rm,tall clean empty bar,no,export completo
+Drop Snatch,weightlifting,kg,,literal,1rm;3rm,drop snatch;drop snatch empty bar,no,export completo
+Panda Pull,weightlifting,kg,,literal,3rm,panda pull,no,export completo
+Snatch Segment,weightlifting,kg,,literal,1rm;3rm,snatch segment;lift off,no,titoli export
+Cluster,weightlifting,kg,,literal,1rm;3rm,sa db clusters;db cluster,no,export completo
+KB Snatch,weightlifting,kg,,literal,1rm,lateral kb. snatch;lateral kb. snatch sx;lateral kb. snatch dx;alf. kneeling db. snatch;kneeling db snatch,no,export completo
+KB Halo,bodyweight,reps,,literal,max_reps,kb. halo,no,export completo
+Back Rack Reverse Lunge,weightlifting,kg,,literal,5rm,back rack rev. lunges,no,export completo
+Overhead Reverse Lunge,weightlifting,kg,,literal,5rm,overhead rev. lunges,no,export completo
+Front Raise,bodyweight,reps,,literal,max_reps,db. front raises;db. front raise,no,export completo
+Ring Row,bodyweight,reps,,literal,max_reps,tempo ring row;ring row,no,export completo
+Russian Twist,bodyweight,reps,,literal,max_reps,db. russian twist,no,export completo
+Leg Raise,bodyweight,reps,,literal,max_reps,leg raises,no,export completo
+Plate Tuck-up,bodyweight,reps,,literal,max_reps,plate tuck up;plate tuck up + red bend,no,export completo
+Knees to Chest,bodyweight,reps,,literal,max_reps,db. k2c;k2c,no,export completo
+DB Toe Touch,bodyweight,reps,,literal,max_reps,db. toe touch,no,export completo
+Copenhagen Plank,bodyweight,min,,literal,hold,copenaghen plank,no,export completo
+Handstand Hold,skill,min,,literal,hold,hs hold;handstand hold,no,export completo
+Inch Worm,bodyweight,distance,,literal,distance,inch worm,no,export completo
+Seated KB Leg Extension,bodyweight,reps,,literal,max_reps,seated kb. leg ex,no,export completo
+Parallette Jump Forward,bodyweight,reps,,literal,max_reps,parallette jump forward,no,export completo
+Seated Box High Jump,bodyweight,reps,,literal,max_reps,seated box high jump;seated jump forward,no,export completo
+Drop from Box,bodyweight,reps,,literal,max_reps,drop from box,no,export completo
+Banded Squat Jump,bodyweight,reps,,literal,max_reps,banded squat jump;kneeling squat jump,no,export completo
+Depth Jump,bodyweight,reps,,literal,max_reps,depth jump;vertical jump;broad jump,no,export completo
+A Skip,bodyweight,min,,literal,hold,banded a skip,no,export completo
+Swim,monostructural,pace,100,intensity,pace;time,free style;freestyle;m freestyle,no,export completo
+Barbell Cycling,skill,reps,,literal,max_reps,light bb cycling;sntach cycling;snatch cycling,no,titoli export

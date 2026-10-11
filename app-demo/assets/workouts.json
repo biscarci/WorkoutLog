@@ -1,0 +1,604 @@
+[
+ {
+  "id": 1106,
+  "date": "2026-09-07",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Row Easy Pace\nB) 6 PVC Banded Overhead Squat",
+  "ranges": []
+ },
+ {
+  "id": 1107,
+  "date": "2026-09-07",
+  "order": 2,
+  "name": "Squat Snatch",
+  "description": "Each Set Perform 2 Depth Jump + Vertical Jump + Broad Jump Before Lift\n5 x 2 70% (Drop N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Squat Snatch",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1108,
+  "date": "2026-09-07",
+  "order": 3,
+  "name": "Snatch Pull",
+  "description": "3 x 3 90% (Wear Strap PD)\nRest 1’30”",
+  "ranges": [
+   {
+    "exercise": "Squat Snatch",
+    "values": [
+     90
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1109,
+  "date": "2026-09-07",
+  "order": 4,
+  "name": "Back Squat",
+  "description": "3 To 4 x 8 70%\nRest 3’-4’",
+  "ranges": [
+   {
+    "exercise": "Back Squat",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1110,
+  "date": "2026-09-07",
+  "order": 5,
+  "name": "Emom 14’",
+  "description": "A) Max Reps Ab-Mat Sit Ups\nB) 6m Hsw + 6m Hsw Backward\nSc. 10m Hsw / Beg. 4/5 Wall Walks",
+  "ranges": []
+ },
+ {
+  "id": 1111,
+  "date": "2026-09-07",
+  "order": 6,
+  "name": "Acessory",
+  "description": "3 Sets\n6-8 Seated Db. Strict Press Rpe 7\nRest 2’\n3 Sets\n8-12 Db. Front Raise Rpe 7\nRest 1’",
+  "ranges": []
+ },
+ {
+  "id": 1112,
+  "date": "2026-09-08",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Ass. Bike Easy Pace\nB) 10 Hollow Rock + 10” Hollow Hold",
+  "ranges": []
+ },
+ {
+  "id": 1113,
+  "date": "2026-09-08",
+  "order": 2,
+  "name": "Squat Clean",
+  "description": "Each Set Perform 2 Box Jump + Drop Jump Before Lift (Box 60/50)\n5 x 2 70% (Drop N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Squat Clean",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1114,
+  "date": "2026-09-08",
+  "order": 3,
+  "name": "Deadlift",
+  "description": "4 x 6  70% (TnG)  (Wear Strap PD)\nRest 3’",
+  "ranges": [
+   {
+    "exercise": "Deadlift",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1115,
+  "date": "2026-09-08",
+  "order": 4,
+  "name": "Gymnastic Endurance",
+  "description": "EMOM 6’\nA) 3 Strict Wall Facing Hspu + AMRAP Cal Ass. Bike\nB) 5 Strict Pull-Up + AMRAP Cal Ass. Bike\nRest 2’ Then\nEMOM 6’\nA) 5 Strict Hspu + AMRAP Cal Ass. Bike\nB) 7 C2B Pull Up + AMRAP Cal Ass. Bike\nRest 2’ Then\nEMOM 6’\nA) 7 Kip. Hspu + AMRAP Cal Ass. Bike\nB) 9 Pull Up + AMRAP Cal Ass. Bike\nScore Only = Calories of Ass. Bike",
+  "ranges": []
+ },
+ {
+  "id": 1116,
+  "date": "2026-09-08",
+  "order": 5,
+  "name": "Accessory",
+  "description": "4 Sets\n6-8 (Side) Db. Bulgarian S. Squat Rpe 7\nRest 2’\n4 Sets\n8-12 (Side) Seated Kb. Leg Ex. Rpe 7\nRest 1’",
+  "ranges": []
+ },
+ {
+  "id": 1117,
+  "date": "2026-09-09",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Ski Erg Easy Pace\nB) 6 Tempo Ring Push Up (3.1.X.0)",
+  "ranges": []
+ },
+ {
+  "id": 1118,
+  "date": "2026-09-09",
+  "order": 2,
+  "name": "Bench Press",
+  "description": "4 x 6 70% \nRest 3’",
+  "ranges": [
+   {
+    "exercise": "Bench Press",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1119,
+  "date": "2026-09-09",
+  "order": 3,
+  "name": "Push Press (From Rack)",
+  "description": "4 x 6 70% (Catch N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Push Press",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1120,
+  "date": "2026-09-09",
+  "order": 4,
+  "name": "BB. EMOM 20’",
+  "description": "A) 6-8 Dip\nB) Rest\nC) 8-10 Db Inc. Bench Press 2 X 17.5/12.5kg\nD) Rest",
+  "ranges": []
+ },
+ {
+  "id": 1121,
+  "date": "2026-09-09",
+  "order": 5,
+  "name": "Accessory",
+  "description": "3 Sets Core Strength\n27 Banded Sit Ups\n27 Db. K2c 7/5kg\nRest 2’ B/t Sets",
+  "ranges": []
+ },
+ {
+  "id": 1122,
+  "date": "2026-09-10",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Row Easy Pace\nB) 6 Banded Overhead Squat",
+  "ranges": []
+ },
+ {
+  "id": 1123,
+  "date": "2026-09-10",
+  "order": 2,
+  "name": "Power Snatch From Block (At Knees)",
+  "description": "Each Set Perform 2 Drop Snatch (Empty BB.) Before Lift\n4 x 3 65%\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Power Snatch",
+    "values": [
+     65
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1124,
+  "date": "2026-09-10",
+  "order": 3,
+  "name": "Front Squat",
+  "description": "3 To 4 x 5 65%\nRest 2’-3’",
+  "ranges": [
+   {
+    "exercise": "Front Squat",
+    "values": [
+     65
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1125,
+  "date": "2026-09-10",
+  "order": 4,
+  "name": "Test 2k Row",
+  "description": "Drag Factor (B/t 120-130)\n3' Z2 + 2' 5 Strong Stroke Ev. 30\"\nFor Time\n2 km Row",
+  "ranges": []
+ },
+ {
+  "id": 1126,
+  "date": "2026-09-11",
+  "order": 1,
+  "name": "Hiit Sport Specifict",
+  "description": "Ev. 5’ X 2 Sets\n3 Rounds\n4 Power Snatch 60/40kg Sc 52/35kg\n4 Rope Climb\nRest 4’ Then\nEv. 5’ X 2 Sets\n3 Rounds\n3 Power CnJ  80/60kg Sc 70/50kg\n12 Toes To Bar",
+  "ranges": []
+ },
+ {
+  "id": 1127,
+  "date": "2026-09-11",
+  "order": 2,
+  "name": "Sport Specific",
+  "description": "AMRAP 12’ \n15 Wall Ball 9/6kg\n12 Cal Bike Erg\n9 Db. Snatch 30/20kg\n\nTarget > 150 Reps",
+  "ranges": []
+ },
+ {
+  "id": 1128,
+  "date": "2026-09-12",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) S. Run Easy Pase (6m Station)\nB) 12m Inch Worm",
+  "ranges": []
+ },
+ {
+  "id": 1129,
+  "date": "2026-09-12",
+  "order": 2,
+  "name": "Complex",
+  "description": "4 Sets 70%\n1 Power Clean\n1 Hang Squat Clean\n1 Split Jerk\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Clean & Jerk",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1130,
+  "date": "2026-09-12",
+  "order": 3,
+  "name": "Pause Back Squat",
+  "description": "3 x 4 70% Pause In Bottom 2”\nRest 3’-4’",
+  "ranges": [
+   {
+    "exercise": "Back Squat",
+    "values": [
+     70
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1131,
+  "date": "2026-09-12",
+  "order": 4,
+  "name": "Team Wod Of 2",
+  "description": "IN 20’ GO FOR:\n100 Syn. Burpees Over Bar\n75 Push Jerk 60/40\n50 Sandbag Clean 70/50\nScore 1\nIn The Remaining Time\nMax Bar Muscle Up\nScore 2",
+  "ranges": []
+ },
+ {
+  "id": 1132,
+  "date": "2026-09-14",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Row Easy Pace\nB) 6 Overhead Squat Jump Forward",
+  "ranges": []
+ },
+ {
+  "id": 1133,
+  "date": "2026-09-14",
+  "order": 2,
+  "name": "Squat Snatch",
+  "description": "Each Set Perform 2 Depth Jump + Vertical Jump + Broad Jump Before Lift\n5 x 2 73% (Drop N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Squat Snatch",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1134,
+  "date": "2026-09-14",
+  "order": 3,
+  "name": "Snatch Pull",
+  "description": "3 x 3 93% (Wear Strap PD)\nRest 1’30”",
+  "ranges": [
+   {
+    "exercise": "Squat Snatch",
+    "values": [
+     93
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1135,
+  "date": "2026-09-14",
+  "order": 4,
+  "name": "Back Squat",
+  "description": "3 To 4 x 8 73%\nRest 3’-4’",
+  "ranges": [
+   {
+    "exercise": "Back Squat",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1136,
+  "date": "2026-09-14",
+  "order": 5,
+  "name": "Test Max Bar Muscle Up",
+  "description": "If You Rest More Then 5” On Top Of The Bar You Are Done",
+  "ranges": []
+ },
+ {
+  "id": 1137,
+  "date": "2026-09-14",
+  "order": 6,
+  "name": "Sport Specific",
+  "description": "For Time\n20 Burpees Box Jump Over\n40/32 Cal Bike Erg\n20 Bar Muscle Ups\n40/32 Cal Bike Erg\n20 Burpees Box Jump Over\nTarget < 15’\nCap 20’",
+  "ranges": []
+ },
+ {
+  "id": 1138,
+  "date": "2026-09-14",
+  "order": 7,
+  "name": "Acessory",
+  "description": "3 Sets\n6 Seated Db. Strict Press Rpe 8\nRest 2’\n3 Sets\n8 Db. Front Raise Rpe 8\nRest 1’",
+  "ranges": []
+ },
+ {
+  "id": 1139,
+  "date": "2026-09-15",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Ass. Bike Easy Pace\nB) 10 Hollow Rock + 10” Hollow Hold",
+  "ranges": []
+ },
+ {
+  "id": 1140,
+  "date": "2026-09-15",
+  "order": 2,
+  "name": "Squat Clean",
+  "description": "Each Set Perform 2 Box Jump + Drop Jump Before Lift\n5 x 2 73% (Drop N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Squat Clean",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1141,
+  "date": "2026-09-15",
+  "order": 3,
+  "name": "Deadlift",
+  "description": "4 x 6  73% (TnG)  (Wear Strap PD)\nRest 3’",
+  "ranges": [
+   {
+    "exercise": "Deadlift",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1142,
+  "date": "2026-09-15",
+  "order": 4,
+  "name": "Test Max Hspu",
+  "description": "If You Rest More Then 5” On Mat You Are Done",
+  "ranges": []
+ },
+ {
+  "id": 1143,
+  "date": "2026-09-15",
+  "order": 5,
+  "name": "Sport Specific",
+  "description": "For Time\n5 Rounds\n10 Front Squat 52/35\n15 Hspu\n50 D. Under\nTarget < 13’\nCap 17’",
+  "ranges": []
+ },
+ {
+  "id": 1144,
+  "date": "2026-09-15",
+  "order": 6,
+  "name": "Accessory",
+  "description": "4 Sets\n6 (Side) Db. Bulgarian S. Squat Rpe 8\nRest 2’\n4 Sets\n8 (Side) Seated Kb. Leg Ex. Rpe 8\nRest 1’",
+  "ranges": []
+ },
+ {
+  "id": 1145,
+  "date": "2026-09-16",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Ski Erg Easy Pace\nB) 6 Tempo Ring Push Up (3.1.X.0)",
+  "ranges": []
+ },
+ {
+  "id": 1146,
+  "date": "2026-09-16",
+  "order": 2,
+  "name": "Bench Press",
+  "description": "4 x 6 73% \nRest 3’",
+  "ranges": [
+   {
+    "exercise": "Bench Press",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1147,
+  "date": "2026-09-16",
+  "order": 3,
+  "name": "Push Press (From Rack)",
+  "description": "4 x 6 73% (Catch N Go)\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Push Press",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1148,
+  "date": "2026-09-16",
+  "order": 4,
+  "name": "BB. EMOM 20’",
+  "description": "A) 8 Banded Inc. Db. Bench Press 2 X 20/12.5\nB) Rest\nC) 8 Seal Row Db. 2 x 15/10\nD) Rest",
+  "ranges": []
+ },
+ {
+  "id": 1149,
+  "date": "2026-09-16",
+  "order": 5,
+  "name": "Accessory",
+  "description": "3 Sets Core\n30 Banded Sit Ups\n20 Db. K2c 10/7kg\nRest 2’ B/t Sets",
+  "ranges": []
+ },
+ {
+  "id": 1150,
+  "date": "2026-09-17",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) Row Easy Pace\nB) 6 Banded Overhead Squat",
+  "ranges": []
+ },
+ {
+  "id": 1151,
+  "date": "2026-09-17",
+  "order": 2,
+  "name": "Power Snatch From Block (At Knees)",
+  "description": "Each Set Perform 2 Drop Snatch (Empty BB.) Before Lift\n4 x 3 68%\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Power Snatch",
+    "values": [
+     68
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1152,
+  "date": "2026-09-17",
+  "order": 3,
+  "name": "Front Squat",
+  "description": "3 To 4 x 5 68%",
+  "ranges": [
+   {
+    "exercise": "Front Squat",
+    "values": [
+     68
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1153,
+  "date": "2026-09-17",
+  "order": 4,
+  "name": "Test Max Reps Chest To Bar Or Pull Up",
+  "description": "If You Rest More Then 5” In Hang On The Bar You Are Done",
+  "ranges": []
+ },
+ {
+  "id": 1154,
+  "date": "2026-09-17",
+  "order": 5,
+  "name": "Monostrctural",
+  "description": "5’ Row Z2\n4 Sets\n4’ Row 95% (or 5” +) From Test 2K\n1’ Row Active Rest 85% ( or 10” +) From Test 2K",
+  "ranges": []
+ },
+ {
+  "id": 1155,
+  "date": "2026-09-18",
+  "order": 1,
+  "name": "Hiit Sport Specifict",
+  "description": "Ev. 4’ X 3 Sets\n3 Rounds\n2 Power Snatch 60/40kg Sc 52/35kg\n2 Rope Climb",
+  "ranges": []
+ },
+ {
+  "id": 1156,
+  "date": "2026-09-18",
+  "order": 2,
+  "name": "Sport Specific",
+  "description": "AMRAP 20’\n1 Claster 70/50kg Sc 60/40kg\n2 Wall Walks\n300m Run",
+  "ranges": []
+ },
+ {
+  "id": 1157,
+  "date": "2026-09-19",
+  "order": 1,
+  "name": "Emom 6’",
+  "description": "A) S. Run Easy Pase (6m Station)\nB) 12m Inch Worm",
+  "ranges": []
+ },
+ {
+  "id": 1158,
+  "date": "2026-09-19",
+  "order": 2,
+  "name": "Complex",
+  "description": "4 Sets 73%\n1 Power Clean\n1 Hang Squat Clean\n1 Split Jerk\nRest 2’",
+  "ranges": [
+   {
+    "exercise": "Clean & Jerk",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1159,
+  "date": "2026-09-19",
+  "order": 3,
+  "name": "Pause Back Squat",
+  "description": "3 x 4 73% Pause In Bottom 2”\nRest 3’-4’",
+  "ranges": [
+   {
+    "exercise": "Back Squat",
+    "values": [
+     73
+    ]
+   }
+  ]
+ },
+ {
+  "id": 1160,
+  "date": "2026-09-19",
+  "order": 4,
+  "name": "Team Wod Of 2",
+  "description": "IN 20’ GO FOR:\n100 Cal Ski or Row\n100m Hsw or 150 Push Up\n100 Pull Up\nScore 1\nIn The Remaining Time\nMax Overhead Squat 43/30kg\nScore 2",
+  "ranges": []
+ },
+ {
+  "id": 1161,
+  "date": "2026-09-19",
+  "order": 5,
+  "name": "Accessory",
+  "description": "3 Sets\n6-8 Seated Bb. Ez. Skull Crusher Rpe 8\nRest 2’\n3 Sets\n8-12 Curl Bic. BB. Ez. Rpe 8\nRest 1’",
+  "ranges": []
+ }
+]
